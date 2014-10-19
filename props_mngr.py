@@ -7,7 +7,7 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  12.01.2014
+##  Created:  13.01.2014
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -18,6 +18,7 @@ import os.path
 from os import listdir
 from os.path import isfile, join
 import subprocess
+import xml.etree.ElementTree as ET
 
 dict_sort = False
 ##const_editor = "D:\Usr\Install\Notepad2\Notepad2.exe "
@@ -28,6 +29,8 @@ ext_delimiter = ";"
 ext_terms = ".terms"
 ext_cmp = ".cmp"
 ext_comb = ".comb"
+ext_props = ".properties"
+props_delimiter = "."
 
 extr_id_delimiter = "="
 extr_comments_delimiter = "#"
@@ -37,9 +40,9 @@ entry_empty = 'xxx'
 # define options for opening a file
 options = {}
 options['defaultextension'] = '*.*'
-options['filetypes'] = [('properties files', '.properties'), ('asp files', '.asp'), ('text files', '.txt'), ('all files', '.*') ]
+options['filetypes'] = [('all file types', '.*'), ('properties files', '.properties'), ('asp', '.asp'), ('xml', '.xml') ]
 options['initialdir'] = os.getcwd()
-options['title'] = 'Select properties source file'
+options['title'] = 'Select properties file (select Props type checkbuttons also)'
 
 src_dict = {}
 src_id_in_file = {}
@@ -49,7 +52,7 @@ dest_dir = ""
 src_extension = ""
 
 def main_gui(root):
-    global props_type
+    global rb_props_type
     global src_file
     global dest_file
     global cb_rm_whitespaces
@@ -61,10 +64,10 @@ def main_gui(root):
 
     rf = LabelFrame(f, relief=GROOVE, bd=2, text = "Props type")
     # Label(rf, text="Props type", width=18, height=2, anchor = W).pack(side=LEFT)
-    props_type = IntVar()
+    rb_props_type = IntVar()
     for text, value in [('properties', 1), ('xml', 2), ('asp', 3)]:
-        Radiobutton(rf, text=text, value=value, variable=props_type).pack(side=LEFT, padx=10)
-    props_type.set(1)
+        Radiobutton(rf, text=text, value=value, variable=rb_props_type).pack(side=LEFT, padx=10)
+    rb_props_type.set(1)
     rf.pack(fill = BOTH, padx=10, pady=0)
 
     # Checkbuttons frame
@@ -130,6 +133,7 @@ def app_browse_src():
     global src_dir
     global src_extension
     global options
+    global rb_props_type
     global cb_in_file_folder
     global src_id_in_file
 
@@ -145,7 +149,8 @@ def app_browse_src():
         (filepath, filename) = os.path.split(sel_file.name)
         (shortname, src_extension) = os.path.splitext(filename)
         (parent_path, src_dir) = os.path.split(filepath)
-        if cb_in_file_folder.get():
+        if rb_props_type.get() == 1 and cb_in_file_folder.get():
+##            print 'properties, all files in directory'
             src_id_in_file.clear()
             # combine all files with the src_extension into single file
             fne = os.path.join(filepath, '_all_files' + src_dir + src_extension)
@@ -168,18 +173,98 @@ def app_browse_src():
             # set file list as selected file
             fned.close()
             src_file.set(fne)
-        else:
-            fd = open(sel_file.name)
+
+        elif rb_props_type.get() == 1 and cb_in_file_folder.get() == 0:
+##            print 'properties, single file'
+            fd = open(sel_file.name) # check selected file
             fd.close()
-        print 'app_browse_src(): src file name: ', src_file.get()
+
+        elif rb_props_type.get() == 2:
+            print 'xml, single file. cb_in_file_folder ignored'
+            # create src/dest .properties file
+            # update src_/dest_file, leave rb as is
+            tree = ET.parse(sel_file.name) # xml_file_asp # xml_file_mp
+            xmlroot = tree.getroot()
+            if xmlroot.find('Section')!=None:
+                # extr_xml_mp:  Section / Msg - parent Name, element Id , element Name + text
+                fnnew = extr_xml_mp(xmlroot, sel_file.name)
+            elif xmlroot.find('phrases')!=None:
+                # extr_xml_aa: find phrases / phrase - attribure key + text
+                fnnew = extr_xml_aa(xmlroot, sel_file.name)
+            src_file.set(fnnew)
+
+        elif rb_props_type.get() == 3:
+            print 'asp, single file. cb_in_file_folder ignored'
+            # create more language depandent .properties files *_en/_ru/_sl
+            # update src_file *_en, change rb to 1, info to
+
+        else:
+            print 'tkMessageBox: Not supported src input combination!'
+
+##        print 'app_browse_src(): src file name: ', src_file.get()
+
     except Exception, e:
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
 '''
-    '''
+'''
+def escape_html(data):
+    data = data.replace("&amp;","&").replace("&quot;",'"').replace("&gt;",">").replace("&lt;","<").replace("\n","")
+    data = data.replace('\\','').replace('</i>','').replace('<br/>','').replace("<i>",'').replace("<br>",'').replace('  ',' ')
+    data2 = data.strip(' ').strip(':')
+    return data2
+
+def extr_xml_mp(root, filename):
+    global ext_props
+    global extr_id_delimiter
+    global props_delimiter
+
+    fne = os.path.splitext(filename)[0]+ext_props
+    if os.path.isfile(fne):
+        os.remove(fne)
+    fned = open(fne, 'w')
+    for parent in root.iterfind('Section'):
+##        print 'SECTION', parent.attrib.get('Name').lower()
+##        print 'SECTION - keys ', parent.keys()
+        for elem in parent.iterfind('Msg'):
+            elemstr = escape_html(elem.text)
+            loc = elemstr.find('<Content>')
+            # check for ToolTip, extract Content text to supplement elem.text
+            if loc >= 0:
+                loc2 = elemstr.find('</Content>')
+                elemstr = elemstr[loc+len('<Content>'):loc2]
+##            print '   MSG - keys ', elem.keys()
+##            print '   ID:       ', parent.attrib.get('Name').lower(), '.' , elem.attrib.get('Id').lower(), '.', elem.attrib.get('Name').lower(), '\n   TEXT:     ', elemstr
+            fned.write(parent.attrib.get('Name') + props_delimiter \
+                        + elem.attrib.get('Id') + props_delimiter \
+                        + elem.attrib.get('Name') + extr_id_delimiter + elemstr + '\n')
+    # Close the file.
+    fned.close()
+    return fne
+
+def extr_xml_aa(root, filename):
+    global ext_props
+    global extr_id_delimiter
+    global props_delimiter
+
+    fne = os.path.splitext(filename)[0]+ext_props
+    if os.path.isfile(fne):
+        os.remove(fne)
+    fned = open(fne, 'w')
+    for parent in root.iterfind('phrases'):
+        print parent.tag
+        for elem in parent.iterfind('phrase'):
+            for child in elem.getchildren():
+##                print '   ID:       ', elem.attrib.get('key'), '\n   TEXT:     ', child.text
+                fned.write(elem.attrib.get('key') + extr_id_delimiter \
+                            + child.text + '\n')
+    # Close the file.
+    fned.close()
+    return fne
+
 def app_extract_src():
-    global props_type
+    global rb_props_type
     global src_file
     global src_dict
     global src_dir
@@ -362,7 +447,7 @@ def app_browse_dest():
                                'Unable to open file: %r' % sel_file.name)
 
 def app_extract_dest():
-    global props_type
+    global rb_props_type
     global dest_file
     global dest_dict
     global dest_dir
@@ -622,15 +707,18 @@ def app_open_files():
     global src_file
     global ext_comb
     global ext_cmp
+    global rb_props_type
+    global cb_in_file_folder
 
     filename = src_file.get()
-    if os.path.isfile(filename):
-        (filepath, filename) = os.path.split(filename)
-        print 'filepath ', filepath
-        subprocess.Popen('explorer /select, "' + filepath + "'" )
-    else:
-        tkMessageBox.showerror('Error Opening File',
-                               'Unable to open file: %r. Browse for file again!' % filename)
+
+##    if os.path.isfile(filename):
+##        (filepath, filename) = os.path.split(filename)
+##        print 'filepath ', filepath
+##        subprocess.Popen('explorer /select, "' + filepath + "'" )
+##    else:
+##        tkMessageBox.showerror('Error Opening File',
+##                               'Unable to open file: %r. Browse for file again!' % filename)
 ##    fne = os.path.splitext(filename)[0]+ext_cmp
 ##    if os.path.isfile(fne):
 ##        os.system(const_editor + fne)
@@ -646,7 +734,7 @@ def app_open_web_utf8convertert():
 
 def app_close():
     global root
-    print "app_close()"
+##    print "app_close()"
     root.destroy()
 
 def main():
