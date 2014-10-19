@@ -126,35 +126,69 @@ def app_extract_src():
     '''
     '''
     try:
-        fd = open(src_file.get())
         nmbs_commnets = 0
         nmbs_other = 0
         nmb = 0
         src_entry = []
         nmb_src_enties = 0
         src_dict = {}
+        fd = open(src_file.get())
         for src_line in fd:
             nmb += 1
             if src_line.startswith("#"):
                 nmbs_commnets += 1
             elif src_line.find("=") > 1:
                 src_entry=src_line.split("=")
-                src_dict [src_entry[0]] = src_entry[1].rstrip('\n') # remove '\n'
+                if len(src_entry) == 2:
+                    src_dict [src_entry[0]] = src_entry[1].rstrip('\n').encode('utf_8') # remove '\n'
+                elif len(src_entry) == 1:
+                    src_dict [src_entry[0]] = "None".encode('utf_8')
+                else:
+                    print "app_extract_src(): Unexpected number of delimiters in src_file", len(src_entry)
                 nmb_src_enties += 1
-                if nmb_src_enties <= 10:
-                    # encode ne dela !!!!!!!!!!!!!!
-                    print "src_entry[0]", src_entry[0], "src_entry[1]", src_entry[1].encode('ascii')
+                if nmb_src_enties >= 100000:
+                    # encode ne dela !!!
+                    print "src_entry[0]", src_entry[0], "src_entry[1]", "u"+src_entry[1] # .encode('utf_8')
             else:
                 nmbs_other += 1
         fd.close()
         print "nmb_src_enties:", nmb_src_enties
-        print "sys.getdefaultencoding()", sys.getdefaultencoding()
-        if cb_open_txt.get() == 1:
-            print "app_extract_src() - src_file.get(): ", src_file.get()
-            os.system("D:\Usr\Install\Notepad2\Notepad2.exe " + src_file.get())
+        fun_save_extracted(src_file.get(), src_dict)
     except IOError, NameError:
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % src_file.get())
+
+# save sorted dictionary into file
+# generate .terms file with localized text onla to import it into TEXTStat
+def fun_save_extracted(filename, ext_dict):
+    ext_extract = ".extr"
+    ext_delimiter = ":"
+    ext_terms = ".terms"
+    ext_cmp = ".cmp"
+    ext_comb = ".comb"
+    # print filename
+    # print ext_dict.keys()
+    fne = os.path.splitext(filename)[0]+ext_extract
+    if os.path.isfile(fne):
+            os.remove(fne)
+    fnt = os.path.splitext(filename)[0]+ext_terms
+    if os.path.isfile(fnt):
+            os.remove(fnt)
+    # sort dict
+    ldict = [x for x in ext_dict.iteritems()]
+    ldict.sort(key=lambda x: x[0]) # sort by key
+    # write to files
+    fned = open(fne, 'w')
+    fntd = open(fnt, 'w')
+    # Get the amount of sales for each day and write # it to the file.
+    for list_element in ldict:
+        fned.write(list_element[0] + ext_delimiter + list_element[1] + '\n')
+        fntd.write(list_element[1] + '\n')
+    # Close the file.
+    fned.close()
+    fntd.close()
+    #if cb_open_txt.get() == 1:
+    os.system("D:\Usr\Install\Notepad2\Notepad2.exe " + fne)
 
 def app_browse_dest():
     global root
