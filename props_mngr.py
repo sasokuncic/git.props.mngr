@@ -7,7 +7,7 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  21.01.2014
+##  Created:  29.01.2014
 ##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
 ##               error - tooltip contains more ';', see more columns in xlsx file
 #-------------------------------------------------------------------------------
@@ -52,11 +52,13 @@ dest_dict = {}
 src_dir = ""
 dest_dir = ""
 src_extension = ""
+wr_ext_file = ""
 
 def main_gui(root):
     global rb_props_type
     global src_file
     global dest_file
+    global wr_file
     global cb_rm_whitespaces
     global cb_open_txt
     global cb_extr_to_file
@@ -132,8 +134,8 @@ def main_gui(root):
     Button(cf, text="  Close  ", command=app_close).pack(side=RIGHT, padx=10, pady=10)
     Button(cf, text="Combine", command=app_combine).pack(side=RIGHT, padx=5, pady=8)
     Button(cf, text="Compare", command=app_compare).pack(side=RIGHT, padx=5, pady=8)
-    Button(cf, text="OpenDir", command=app_open_files).pack(side=LEFT, padx=5, pady=8)
-    Button(cf, text="Converter", command=app_open_web_utf8convertert).pack(side=LEFT, padx=5, pady=8)
+##    Button(cf, text="OpenDir", command=app_open_files).pack(side=LEFT, padx=5, pady=8)
+    Button(cf, text="UTF8webConv", command=app_open_web_utf8convertert).pack(side=LEFT, padx=5, pady=8)
     cf.pack(fill = BOTH, padx=0)
 
     f.pack()
@@ -745,7 +747,35 @@ def fun_save_combined(filename, intersection):
 
 
 def app_browse_wr():
-    print 'app_browse_wr'
+    global wr_file # src_file
+    global wr_dir # src_dir
+    global wr_extension # src_extension
+    # not used globals yet
+    global options
+    global rb_props_type
+    global cb_in_file_folder
+    global src_id_in_file
+
+    sel_file = tkFileDialog.askopenfile(mode='r', **options)
+    #print sel_file.name
+    if not sel_file:
+        # Cancel button selected
+        return
+    try:
+        # set src file name
+        wr_file.set(sel_file.name)
+        # set src dirname
+        (filepath, filename) = os.path.split(sel_file.name)
+        (shortname, wr_extension) = os.path.splitext(filename)
+        (parent_path, wr_dir) = os.path.split(filepath)
+##        print 'properties, single file'
+        fd = open(sel_file.name) # check selected file
+        fd.close()
+        print 'app_browse_wr(): wbm_ref file name: ', wr_file.get()
+    except Exception, e:
+        raise
+        tkMessageBox.showerror('Error Opening Src File',
+                               'Unable to open file: %r' % sel_file.name)
 
 ''' wbm_ref
 Element consist from three main groups of items:
@@ -771,8 +801,163 @@ rE = 	Radio button (end) - IGNORE
 CE = 	Check box Name
 or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
 '''
+
 def app_extract_wr():
+    global wr_dict
+    global wr_ext_file
+
     print 'app_extract_wr'
+    fname_wr = "D:\Portable Python 2.7.5.1\__py_term_apps\wbm_ref.txt" #
+    wr_dict = app_extract_wbm_ref(fname_wr)
+##    wr_dict = app_extract_wbm_ref(wr_dict.name)
+
+    if len(wr_dict) > 0:
+        fun_save_wr_extracted(fname_wr, wr_dict)
+        if cb_open_txt.get() == 1:
+            os.system(const_editor + wr_ext_file)
+
+# multiple values for one key,
+class mdict(dict):
+    def __setitem__(self, key, value):
+        """add the given value to the list of values for this key"""
+        self.setdefault(key, []).append(value)
+
+
+def app_extract_wbm_ref(filename):
+    global wr_types_used
+    wr_types_all = ['BE', 'DF', 'DE', 'DA', 'FA', 'FE', 'FF', 'FG', 'RE', 'RF', \
+                    'TE', 'VA', 'E', 'VE', 'VF', 'EG', 'XA', 'XF', 'CE', 'XE', 'EX', \
+                    'IA', 'IE', 'IF', 'bE', 'SW', 'UE', 'UF', 'UA'] # 29 types
+
+    wr_types_all = ['BE', 'CE', 'E', 'EG', 'EX', 'FA', 'FE', 'FF', 'FG', 'IA', 'RE', 'RF', 'TE', 'UA', 'VA', 'VE', 'VF', 'XE', 'XF']
+    wr_types_ignored = ['DE', 'DF', 'IF', 'IE', 'UE', 'UF', 'bE', 'rE ', 'rF', 'XA', 'SW']
+    tmc_dict = {'FG':0, 'EG':1, 'E':2, 'TE':3, 'BE':4, \
+                    'CE':5, 'RE':6, 'RF':7, 'FE':8, 'FF':9, 'FA':10, \
+                    'VE':11, 'VF':12, 'DA':13, 'DF':14, 'DE': 15 }
+    tmc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # counters for used types in src_file
+    ext_delimiter = ";"
+
+    fdline = 0
+    src_entry = []
+    nmbs_ignored = 0
+    nmbs_ignored_integers = 0
+    wr_entry_stat = [0, 0, 0, 0, 0, 0, 0, 0] # statistic numb of elem in entry
+    wr_types = []       # init used types
+    wr_types_cntrs = [] # init types statistic counters
+    wr_types_stat = {}
+    wr_types_used = []
+    ext_dict = mdict() # extracted dictionary: gui string: list of types
+    try:
+        fd = open(filename)
+        for src_line in fd:
+            fdline += 1
+            src_line = src_line.rstrip('\n')
+            src_entry=src_line.split(ext_delimiter) # split line into entries
+            wr_entry_stat[len(src_entry)] += 1 # update statistic numb of elem in entry
+            if len(src_entry) > 1:
+                # types statistic
+                if src_entry[0] not in wr_types:
+                    wr_types.append(src_entry[0])   # new type found, extend the list of used types
+                    wr_types_cntrs.append(0)        # open new counter
+                wr_types_cntrs[wr_types.index(src_entry[0])] += 1   # update types statistic
+                #
+                if src_entry[0].endswith == 'A' or src_entry[0] in wr_types_ignored:
+                    nmbs_ignored += 1
+                elif src_entry[1].startswith('m.'):
+                    tmc[tmc_dict[src_entry[0]]] +=1
+                elif len(src_entry) >= 3 and src_entry[2].startswith('m.'):
+                    tmc[tmc_dict[src_entry[0]]] +=1
+                elif src_entry[1].startswith('c.'):
+                    tmc[tmc_dict[src_entry[0]]] +=1
+                elif len(src_entry) >= 3 and src_entry[0] == 'VE' or src_entry[0] == 'VF':
+                    if src_entry[2].isdigit():
+                        nmbs_ignored_integers += 1
+                    else:
+                        ext_dict[src_entry[2]] = src_entry[0]
+                        if src_entry[0] not in wr_types_used:
+                            wr_types_used.append(src_entry[0])
+                else:
+                    if src_entry[1].isdigit():
+                        nmbs_ignored_integers += 1
+                    else:
+                        ext_dict[src_entry[1]] = src_entry[0]
+                        if src_entry[0] not in wr_types_used:
+                            wr_types_used.append(src_entry[0])
+##                if fdline <= 5: # test print > 100000: #
+##                    print fdline, ":  src_entry[0]", src_entry[0], "src_entry[1]", src_entry[1] # .encode('utf_8')
+        fd.close()
+        print 'wr ignored empty lines and numeric values: ', nmbs_ignored, nmbs_ignored_integers
+        print 'wr_entry_stat: ', wr_entry_stat
+        wr_types_stat = {k: v for k, v in zip(wr_types, wr_types_cntrs)}
+        print 'wr_types_stat: ', wr_types_stat
+        wr_types_used.sort()
+        print 'wr_types_used: ', wr_types_used
+
+        print 'Number of m.*/c.* entries: ', tmc
+        print 'm.*/c.* entries types:     ', tmc_dict.keys()
+##        print "Types overview:\n ignored:", nmbs_ignored, "\n lines in file:", fdline
+##                    "\n comments: ", nmbs_commnets, "\n undefined: ", nmbs_other
+
+    except IOError, NameError:
+        tkMessageBox.showerror('Error Opening File',
+                               'Unable to open file: %r' % filename)
+    return ext_dict
+
+
+def fun_save_wr_extracted(filename, ext_dict):
+    from collections import Counter
+    global ext_extract
+    global ext_delimiter
+    global wr_ext_file
+    global wr_types_used
+    wr_types_in_line = []
+    wr_types_in_line2 = []
+    wr_types_in_line = ['0' for x in range(len(wr_types_used))]
+    print wr_types_used
+    print wr_types_in_line
+    ext_extract = '.extr'
+    ext_delimiter = ';'
+    list_elem1 = ''
+    # print filename
+    # print ext_dict.keys()
+    fne = os.path.splitext(filename)[0]+ext_extract
+    if os.path.isfile(fne):
+            os.remove(fne)
+    ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
+    wr_ext_file = fne
+    # write to files
+    fned = open(fne, 'w')
+    fned.write('SW-ID' + ext_delimiter + 'TypesSum' + ext_delimiter + ext_delimiter.join(wr_types_used) + '\n')
+##    excel_c_str = ['=SUM(C3:C20000)' for x in range(len(wr_types_used))]
+##    fned.write(' ' + ext_delimiter + ' ' + ext_delimiter + ext_delimiter.join(excel_c_str) + '\n') # fill all columns
+    # output with types' array - 3 lines
+    fned.write(' ' + ext_delimiter + ' ' + ext_delimiter + '=SUM(C3:C20000)' + '\n') # fill first column only
+    ln = 2
+    for list_element in ldict:
+        # count, sort, remove multiplicated values
+        wr_types_in_line2 = list(wr_types_in_line)
+        ln += 1
+        excel_str = ext_delimiter + '=SUM(C' + str(ln) + ':AH' + str(ln) + ')' + ext_delimiter # not used in simple type
+        c=Counter(list_element[1])
+        # output simple - 1line
+##        list_elem1 = ' '.join(c.keys())
+        # output with types' array - 4 lines
+        type_list = set(c.keys())
+        for elm in type_list:
+            i = wr_types_used.index(elm)
+            wr_types_in_line2[i] = '1'
+        if list_element[0]== '':
+            # output with types' array - 1 line
+            fned.write('xxx' + excel_str + ext_delimiter.join(wr_types_in_line2) + '\n')
+            # output simple - 1line
+##            fned.write('xxx' + ext_delimiter + list_elem1 + '\n')
+        else:
+            # output with types array - 1 line
+            fned.write(list_element[0] + excel_str + ext_delimiter.join(wr_types_in_line2) + '\n')
+            # output simple - 1line
+##            fned.write(list_element[0] + ext_delimiter + list_elem1 + '\n')
+    # Close the file.
+    fned.close()
 
 
 def app_open_files():
