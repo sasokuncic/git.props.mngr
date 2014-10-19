@@ -16,6 +16,14 @@ from Tkinter import *
 import os, sys
 import tkFileDialog, tkMessageBox
 
+# define options for opening a file
+options = {}
+options['defaultextension'] = '.*'
+options['filetypes'] = [('all files', '.*'), ('properties files', '.properties'), ('asp files', '.asp'), ('text files', '.txt')]
+options['initialdir'] = os.getcwd()
+options['title'] = 'Select properties source file'
+
+
 def main_gui(root):
     global props_type
     global src_file
@@ -85,7 +93,6 @@ def main_gui(root):
     Button(cf, text="Close", command=app_close).pack(side=RIGHT, padx=10, pady=10)
     Button(cf, text="Combine", command=app_combine).pack(side=RIGHT, padx=5, pady=8)
     Button(cf, text="Compare", command=app_compare).pack(side=RIGHT, padx=5, pady=8)
-
     cf.pack(fill = BOTH, padx=0)
 
     f.pack()
@@ -94,13 +101,7 @@ def app_browse_src():
     # http://tkinter.unpythonic.net/wiki/tkFileDialog
     global root
     global src_file
-
-    # define options for opening a file
-    options = {}
-    options['defaultextension'] = '.*'
-    options['filetypes'] = [('all files', '.*'), ('properties files', '.properties'), ('asp files', '.asp'), ('text files', '.txt')]
-    options['initialdir'] = os.getcwd()
-    options['title'] = 'Select properties source file'
+    global options
 
     sel_file = tkFileDialog.askopenfile(mode='r', **options)
     #print sel_file.name
@@ -117,46 +118,59 @@ def app_browse_src():
                                'Unable to open file: %r' % sel_file.name)
 
 def app_extract_src():
-    global root
     global props_type
-    global cb_rm_whitespaces
-    global cb_open_txt
     global src_file
     global src_dict
-    '''
-    '''
+
+    src_dict = {}
+    src_dict = fun_extract(src_file.get())
+    fun_save_extracted(src_file.get(), src_dict)
+
+def fun_extract(filename):
+    extr_id_delimiter = "="
+    extr_comments_delimiter = "#"
     try:
         nmbs_commnets = 0
         nmbs_other = 0
         nmb = 0
+        nmb_src_enties1w = 0
+        nmb_src_enties2w = 0
+
+        ext_dict = {}
         src_entry = []
-        nmb_src_enties = 0
-        src_dict = {}
-        fd = open(src_file.get())
+        fd = open(filename)
         for src_line in fd:
             nmb += 1
-            if src_line.startswith("#"):
+            src_line = src_line.rstrip('\n')
+            if src_line.startswith(extr_comments_delimiter):
                 nmbs_commnets += 1
-            elif src_line.find("=") > 1:
-                src_entry=src_line.split("=")
+            elif src_line.find("=") > 0:
+                src_entry=src_line.split(extr_id_delimiter)
                 if len(src_entry) == 2:
-                    src_dict [src_entry[0]] = src_entry[1].rstrip('\n').encode('utf_8') # remove '\n'
+                    if src_entry[1] == '':
+                        src_entry[1] = "None"
+                        nmb_src_enties1w += 1
+                    else:
+                        nmb_src_enties2w += 1
+                    ext_dict [src_entry[0]] = src_entry[1] # .encode('utf_8') # remove '\n'
+                    # print "===       src_entry[0]: ", src_entry[0], "src_entry[1]: ", src_entry[1]
                 elif len(src_entry) == 1:
-                    src_dict [src_entry[0]] = "None".encode('utf_8')
+                    ext_dict [src_entry[0]] = "None" # .encode('utf_8')
+                    nmb_src_enties1w += 1
                 else:
-                    print "app_extract_src(): Unexpected number of delimiters in src_file", len(src_entry)
-                nmb_src_enties += 1
-                if nmb_src_enties >= 100000:
-                    # encode ne dela !!!
-                    print "src_entry[0]", src_entry[0], "src_entry[1]", "u"+src_entry[1] # .encode('utf_8')
+                    print "fun_extract(): Unexpected number of delimiters!", len(src_entry), "src_line(", nmb, "):", src_line
+                if nmb_src_enties2w > 10000: # <= 5: # test print
+                    print "src_entry[0]", src_entry[0], "src_entry[1]", src_entry[1] # .encode('utf_8')
             else:
                 nmbs_other += 1
         fd.close()
-        print "nmb_src_enties:", nmb_src_enties
-        fun_save_extracted(src_file.get(), src_dict)
+        print "Number of entries:\n one-word:", nmb_src_enties1w, "\n two-words:", nmb_src_enties2w, \
+                    "\n comments: ", nmbs_commnets, "\n undefined: ", nmbs_other
+
     except IOError, NameError:
-        tkMessageBox.showerror('Error Opening Src File',
-                               'Unable to open file: %r' % src_file.get())
+        tkMessageBox.showerror('Error Opening File',
+                               'Unable to open file: %r' % filename)
+    return ext_dict
 
 # save sorted dictionary into file
 # generate .terms file with localized text onla to import it into TEXTStat
@@ -174,9 +188,9 @@ def fun_save_extracted(filename, ext_dict):
     fnt = os.path.splitext(filename)[0]+ext_terms
     if os.path.isfile(fnt):
             os.remove(fnt)
-    # sort dict
-    ldict = [x for x in ext_dict.iteritems()]
-    ldict.sort(key=lambda x: x[0]) # sort by key
+    ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
+    if False:
+        ldict.sort(key=lambda x: x[0]) # sort by key
     # write to files
     fned = open(fne, 'w')
     fntd = open(fnt, 'w')
@@ -187,27 +201,44 @@ def fun_save_extracted(filename, ext_dict):
     # Close the file.
     fned.close()
     fntd.close()
-    #if cb_open_txt.get() == 1:
-    os.system("D:\Usr\Install\Notepad2\Notepad2.exe " + fne)
+    if cb_open_txt.get() == 1:
+       os.system("D:\Usr\Install\Notepad2\Notepad2.exe " + fne)
 
 def app_browse_dest():
+    # http://tkinter.unpythonic.net/wiki/tkFileDialog
     global root
     global dest_file
-    print "src_file:", dest_file.get()
+    global options
+
+    sel_file = tkFileDialog.askopenfile(mode='r', **options)
+    #print sel_file.name
+    if not sel_file:
+        # Cancel button selected
+        return
+    try:
+        dest_file.set(sel_file.name)
+        fd = open(sel_file.name)
+        fd.close()
+    except Exception, e:
+        raise
+        tkMessageBox.showerror('Error Opening Src File',
+                               'Unable to open file: %r' % sel_file.name)
 
 def app_extract_dest():
-    global root
     global props_type
-    global cb_rm_whitespaces
-    global cb_open_txt
     global dest_file
-    print "props_type:", props_type.get()
-    print "cb_rm_whitespaces:", cb_rm_whitespaces.get()
-    print "cb_open_txt:", cb_open_txt.get()
-    print "dest_file:", dest_file.get()
+    global dest_dict
+
+    dest_dict = {}
+    dest_dict = fun_extract(dest_file.get())
+    fun_save_extracted(dest_file.get(), dest_dict)
 
 def app_compare():
     global root
+    global src_file
+    global dest_file
+    global src_dict
+    global dest_dict
     print "app_compare()"
 
 def app_combine():
