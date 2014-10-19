@@ -34,6 +34,7 @@ ext_comb = ".comb"
 
 extr_id_delimiter = "="
 extr_comments_delimiter = "#"
+extr_filename_delimiter = "*"
 entry_empty = 'xxx'
 
 # define options for opening a file
@@ -44,9 +45,11 @@ options['initialdir'] = os.getcwd()
 options['title'] = 'Select properties source file'
 
 src_dict = {}
+src_id_in_file = {}
 dest_dict = {}
 src_dir = ""
 dest_dir = ""
+src_extension = ""
 
 def main_gui(root):
     global props_type
@@ -89,7 +92,7 @@ def main_gui(root):
     # Label All in File folder, checkbox
     cb_in_file_folder = IntVar()
     cb_in_file_folder.set(1)
-    Checkbutton(cf, text = "All in File folder", variable = cb_in_file_folder, \
+    Checkbutton(cf, text = "All in files in folder", variable = cb_in_file_folder, \
                      onvalue = 1, offvalue = 0, height=1).pack(side=LEFT, padx=5)
     cf.pack(fill = BOTH, padx=10, pady=0)
 
@@ -128,7 +131,10 @@ def app_browse_src():
     global root
     global src_file
     global src_dir
+    global src_extension
     global options
+    global cb_in_file_folder
+    global src_id_in_file
 
     sel_file = tkFileDialog.askopenfile(mode='r', **options)
     #print sel_file.name
@@ -140,15 +146,41 @@ def app_browse_src():
         src_file.set(sel_file.name)
         # set src dirname
         (filepath, filename) = os.path.split(sel_file.name)
-        (parent_path, dirname) = os.path.split(filepath)
-        src_dir = dirname
-        fd = open(sel_file.name)
-        fd.close()
+        (shortname, src_extension) = os.path.splitext(filename)
+        (parent_path, src_dir) = os.path.split(filepath)
+        if cb_in_file_folder.get():
+            src_id_in_file.clear()
+            # combine all files with the src_extension into single file
+            fne = os.path.join(filepath, '_all_files' + src_extension)
+##            print 'app_browse_src(): file list name: ', fne
+            if os.path.isfile(fne):
+                os.remove(fne)
+            textfiles = [ join(filepath,f) for f in listdir(filepath) if isfile(join(filepath,f)) and src_extension in  f]
+            fned = open(fne, 'w')
+            fned.write('######### Merged source files with %s extension #########\n' % src_extension)
+            for textfile in textfiles:
+                # Important: line starts with  '*' and contains '=' delimiter
+                #            for extracting textfile from merged file in fun_extract()
+                #            Only file in src folder contains this additional info
+                fned.write('\n*********=%s=\n' % textfile)
+                fdtextfile = open(textfile, 'r')
+                for src_line in fdtextfile:
+                    fned.write(src_line)
+                fdtextfile.close()
+##                print 'app_browse_src(): textfile: ', textfile
+            # set file list as selected file
+            fned.close()
+            src_file.set(fne)
+        else:
+            fd = open(sel_file.name)
+            fd.close()
+        print 'app_browse_src(): src file name: ', src_file.get()
     except Exception, e:
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
-
+'''
+    '''
 def app_extract_src():
     global props_type
     global src_file
@@ -166,24 +198,18 @@ def app_extract_src():
 ##        (filepath, filename) = os.path.split(sel_file.name)
 ##        (parent_path, dirname) = os.path.split(filepath)
 ##        dest_dir = dirname
-    if cb_in_file_folder.get():
-        # all files in dir xxx
-        (filepath, filename) = os.path.split(src_file.get())
-        textfiles = [ join(filepath,f) for f in listdir(filepath) if isfile(join(filepath,f)) and '.properties' in  f]
-        for textfile in textfiles:
-            print textfile
-        return
-    else:
-        fn = src_file.get()
-        src_dict = fun_extract(fn)
-# save to .term and .extr file
+    fn = src_file.get()
+    src_dict = fun_extract(fn)
     if cb_extr_to_file.get():
+        # save to .term and .extr file
         fun_save_extracted(fn, src_dict)
 
 def fun_extract(filename):
     global extr_id_delimiter
     global extr_comments_delimiter
     global entry_empty
+    global extr_filename_delimiter
+    global src_id_in_file
 
     try:
         nmbs_commnets = 0
@@ -191,15 +217,22 @@ def fun_extract(filename):
         nmb = 0
         nmb_src_enties1w = 0
         nmb_src_enties2w = 0
+        nmb_file_names = 0
 
         ext_dict = {}
         src_entry = []
+        src_entry_file = 'xxxfff'
         fd = open(filename)
         for src_line in fd:
             nmb += 1
             src_line = src_line.rstrip('\n')
             if src_line.startswith(extr_comments_delimiter):
                 nmbs_commnets += 1
+            elif src_line.startswith(extr_filename_delimiter):
+                src_entry=src_line.split(extr_id_delimiter) # split, 3 items
+                (filepath, src_entry_file) = os.path.split(src_entry [1])
+                nmb_file_names += 1
+                print "fun_extract(): src_entry_file=%s!" % src_entry_file
             elif src_line.find("=") > 0:
                 src_entry=src_line.split(extr_id_delimiter, 1) # split using only the first delimiter !
                 if len(src_entry) == 2:
@@ -209,19 +242,25 @@ def fun_extract(filename):
                     else:
                         nmb_src_enties2w += 1
                     ext_dict [src_entry[0]] = src_entry[1] # .encode('utf_8') # remove '\n'
+                    if nmb_file_names:
+                        # if merged src file is reading, build id to file mapping
+                        src_id_in_file[src_entry[0]] = src_entry_file
                     # print "===       src_entry[0]: ", src_entry[0], "src_entry[1]: ", src_entry[1]
                 elif len(src_entry) == 1:
                     ext_dict [src_entry[0]] = entry_empty # .encode('utf_8')
                     nmb_src_enties1w += 1
                 else:
-                    print "fun_extract(): Unexpected number of delimiters!", len(src_entry), "src_line(", nmb, "):", src_line
-                if nmb_src_enties2w > 10000: # <= 5: # test print
-                    print "src_entry[0]", src_entry[0], "src_entry[1]", src_entry[1] # .encode('utf_8')
+                    tkMessageBox.showwarning('Ectract: warning',
+                               "Unexpected number of delimiters!" + str(len(src_entry)) + "src_line(" + str(nmb) + "):" + src_line)
+##                if nmb_src_enties2w > 10000: # <= 5: # test print
+##                    print "src_entry[0]", src_entry[0], "src_entry[1]", src_entry[1] # .encode('utf_8')
             else:
                 nmbs_other += 1
         fd.close()
-        print "Number of entries:\n one-word:", nmb_src_enties1w, "\n two-words:", nmb_src_enties2w, \
-                    "\n comments: ", nmbs_commnets, "\n undefined: ", nmbs_other
+        tkMessageBox.showinfo('File extracting report',
+            "Number of entries:\n\n one-word:" + str(nmb_src_enties1w) + "\n two-words:" + str(nmb_src_enties2w) + \
+                    "\n comments: " + str(nmbs_commnets) + "\n undefined: " +  str(nmbs_other) + \
+                    "\n files (in merged file):" + str(nmb_file_names))
 
     except IOError, NameError:
         tkMessageBox.showerror('Error Opening File',
@@ -267,9 +306,10 @@ def app_browse_dest():
     global dest_file
     global dest_dir
     global options
+    global cb_in_file_folder
+    global dest_extension
 
     sel_file = tkFileDialog.askopenfile(mode='r', **options)
-    #print sel_file.name
     if not sel_file:
         # Cancel button selected
         return
@@ -278,13 +318,49 @@ def app_browse_dest():
         dest_file.set(sel_file.name)
         # set dest dirname
         (filepath, filename) = os.path.split(sel_file.name)
-        (parent_path, dirname) = os.path.split(filepath)
-        dest_dir = dirname
-        fd = open(sel_file.name)
-        fd.close()
+        (shortname, dest_extension) = os.path.splitext(filename)
+        (parent_path, dest_dir) = os.path.split(filepath)
+        if src_extension != dest_extension and src_extension != '' and dest_extension != '':
+            tkMessageBox.showerror('Error Opening Dest File', \
+                               "Selected extensions of src (%s) and dest (%s) files are not the same!" % (src_extension, dest_extension))
+            dest_file.set('')
+            return
+        if src_dir == dest_dir and dest_dir != '':
+            tkMessageBox.showerror('Error Opening Dest File in Src Folder', \
+                               "Selected file is in the same directory (%s) as src file (%s)!" % (dest_dir, src_dir))
+            dest_file.set('')
+            return
+
+        if cb_in_file_folder.get():
+            # combine all files with the dest_extension into single file
+            fne = os.path.join(filepath, '_all_files' + dest_extension)
+##            print 'app_browse_src(): file list name: ', fne
+            if os.path.isfile(fne):
+                os.remove(fne)
+            textfiles = [ join(filepath,f) for f in listdir(filepath) if isfile(join(filepath,f)) and dest_extension in  f]
+            fned = open(fne, 'w')
+            fned.write('######### Merged files with %s extension #########\n' % dest_extension)
+            for textfile in textfiles:
+                # Important: line starts with  '*' and contains '=' delimiter
+                #            for extracting textfile from merged src file in fun_extract()
+                #               Merged dest file contains '#' instead of '*'
+                #            Only file in src folder contains this additional info
+                fned.write('\n######### File=%s=\n' % textfile)
+                fdtextfile = open(textfile, 'r')
+                for src_line in fdtextfile:
+                    fned.write(src_line)
+                fdtextfile.close()
+##                print 'app_browse_src(): textfile: ', textfile
+            # set file list as selected file
+            fned.close()
+            dest_file.set(fne)
+        else:
+            fd = open(dest_file.name)
+            fd.close()
+        print 'app_browse_dest(): dest file name: ', dest_file.get()
     except Exception, e:
         raise
-        tkMessageBox.showerror('Error Opening Src File',
+        tkMessageBox.showerror('Error Opening Dest File',
                                'Unable to open file: %r' % sel_file.name)
 
 def app_extract_dest():
@@ -475,6 +551,7 @@ def fun_save_combined(filename, intersection):
     global dict_sort
     global ext_delimiter
     global ext_comb
+    global src_id_in_file
 ##    global src_dir
 ##    global dest_dir
 
@@ -510,6 +587,8 @@ def fun_save_combined(filename, intersection):
 ##            s_d_ratio = "{:.0%}".format((dest_len - src_len) / src_len * 100 )
             i +=1
             src_len = '=(LEN(F%(s)s)-LEN(E%(s)s))/LEN(E%(s)s)' % {'s': str(i)} # Excel ratio formula
+            if cb_in_file_folder:
+                filename1 = src_id_in_file.get(list_element[0])
             fned.write(dirname + ext_delimiter + filename1 + ext_delimiter \
                             + src_len + ext_delimiter\
                             + list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) \
