@@ -7,7 +7,9 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  14.01.2014
+##  Created:  21.01.2014
+##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
+##               error - tooltip contains more ';', see more columns in xlsx file
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -222,7 +224,8 @@ def app_browse_src():
 '''
 def escape_html(data):
     data = data.replace("&amp;","&").replace("&quot;",'"').replace("&gt;",">").replace("&lt;","<").replace("\n","")
-    data = data.replace('\\','').replace('</i>','').replace('<br/>','').replace("<i>",'').replace("<br>",'').replace('  ',' ')
+    data = data.replace('\\<','<').replace('\\>','>').replace('</','<')
+    data = data.replace('</i>','').replace('<br/>','').replace("<i>",'').replace("<br>",'').replace('  ',' ')
     data2 = data.strip(' ').strip(':')
     return data2
 
@@ -462,12 +465,12 @@ def app_browse_dest():
             tree = ET.parse(sel_file.name) # xml_file_asp # xml_file_mp
             xmlroot = tree.getroot()
             if xmlroot.find('Section')!=None:
-                # extr_xml_mp:  Section / Msg - parent Name, element Id , element Name + text
+                # extr_xml_mp - MP6012AX:  Section / Msg - parent Name, element Id , element Name + text
                 fnnew = extr_xml_mp(xmlroot, sel_file.name)
             elif xmlroot.find('phrases')!=None:
-                # extr_xml_aa: find phrases / phrase - attribure key + text
+                # extr_xml_aa - AA6191AX: find phrases / phrase - attribure key + text
                 fnnew = extr_xml_aa(xmlroot, sel_file.name)
-            src_file.set(fnnew)
+            dest_file.set(fnnew)
 
         elif rb_props_type.get() == 3:
             print 'asp, single file. cb_in_file_folder ignored'
