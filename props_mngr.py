@@ -7,7 +7,7 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  13.01.2014
+##  Created:  14.01.2014
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -116,6 +116,16 @@ def main_gui(root):
     Button(df, text="Extract", command=app_extract_dest).pack(side=RIGHT, padx=5, pady=8)
     df.pack(fill = BOTH, padx=10, pady=0)
 
+    # wbm_ref file frame, wr_file
+    wf = LabelFrame(f, relief=SUNKEN, bd=2, text = "wbm_ref.txt File")
+    # Label(wf, text="File dest", width=12, height=2).pack(side=LEFT, pady=5)
+    wr_file = StringVar()
+    Entry(wf, bd = 2, fg = "blue", width =60, textvariable=wr_file).pack(side=LEFT, padx=10)
+    wr_file.set("")
+    Button(wf, text="...", command=app_browse_wr).pack(side=LEFT, padx=5, pady=8)
+    Button(wf, text="Extract", command=app_extract_wr).pack(side=RIGHT, padx=5, pady=8)
+    wf.pack(fill = BOTH, padx=10, pady=0)
+
     cf = Frame(f, relief=GROOVE, borderwidth=0)
     Button(cf, text="  Close  ", command=app_close).pack(side=RIGHT, padx=10, pady=10)
     Button(cf, text="Combine", command=app_combine).pack(side=RIGHT, padx=5, pady=8)
@@ -200,6 +210,7 @@ def app_browse_src():
 
         else:
             print 'tkMessageBox: Not supported src input combination!'
+        options['initialdir'] = src_dir
 
 ##        print 'app_browse_src(): src file name: ', src_file.get()
 
@@ -238,7 +249,7 @@ def extr_xml_mp(root, filename):
 ##            print '   ID:       ', parent.attrib.get('Name').lower(), '.' , elem.attrib.get('Id').lower(), '.', elem.attrib.get('Name').lower(), '\n   TEXT:     ', elemstr
             fned.write(parent.attrib.get('Name') + props_delimiter \
                         + elem.attrib.get('Id') + props_delimiter \
-                        + elem.attrib.get('Name') + extr_id_delimiter + elemstr + '\n')
+                        + elem.attrib.get('Name') + extr_id_delimiter + str(elemstr) + '\n')
     # Close the file.
     fned.close()
     return fne
@@ -387,7 +398,8 @@ def app_browse_dest():
     global root
     global dest_file
     global dest_dir
-    global options
+    global src_extension
+    global rb_props_type
     global cb_in_file_folder
     global dest_extension
 
@@ -403,7 +415,8 @@ def app_browse_dest():
         (shortname, dest_extension) = os.path.splitext(filename)
         (parent_path, dest_dir) = os.path.split(filepath)
 
-        if cb_in_file_folder.get():
+        if rb_props_type.get() == 1 and cb_in_file_folder.get():
+##          print 'properties, all files in directory'
             if src_extension != dest_extension and src_extension != '' and dest_extension != '':
                 tkMessageBox.showinfo('Info Opening Dest File', \
                                    "Selected extensions of src (%s) and dest (%s) files are not the same! You could proceed or browse for new file!" % (src_extension, dest_extension))
@@ -437,14 +450,38 @@ def app_browse_dest():
             # set file list as selected file
             fned.close()
             dest_file.set(fne)
-        else:
-            fd = open(dest_file.get())
+        elif rb_props_type.get() == 1 and cb_in_file_folder.get() == 0:
+##            print 'properties, single file'
+            fd = open(dest_file.get()) # check selected file
             fd.close()
+
+        elif rb_props_type.get() == 2:
+            print 'xml, single file. cb_in_file_folder ignored'
+            # create dest .properties file
+            # update dest_file, leave rb as is
+            tree = ET.parse(sel_file.name) # xml_file_asp # xml_file_mp
+            xmlroot = tree.getroot()
+            if xmlroot.find('Section')!=None:
+                # extr_xml_mp:  Section / Msg - parent Name, element Id , element Name + text
+                fnnew = extr_xml_mp(xmlroot, sel_file.name)
+            elif xmlroot.find('phrases')!=None:
+                # extr_xml_aa: find phrases / phrase - attribure key + text
+                fnnew = extr_xml_aa(xmlroot, sel_file.name)
+            src_file.set(fnnew)
+
+        elif rb_props_type.get() == 3:
+            print 'asp, single file. cb_in_file_folder ignored'
+            # create more language depandent .properties files *_en/_ru/_sl
+            # update src_file *_en, change rb to 1, info to
+
+        else:
+            print 'tkMessageBox: Not supported src input combination!'
         print 'app_browse_dest(): dest file name: ', dest_file.get()
     except Exception, e:
         raise
         tkMessageBox.showerror('Error Opening Dest File',
                                'Unable to open file: %r' % sel_file.name)
+    options['initialdir'] = dest_dir
 
 def app_extract_dest():
     global rb_props_type
@@ -702,6 +739,38 @@ def fun_save_combined(filename, intersection):
                             + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
     # Close the file.
     fned.close()
+
+
+def app_browse_wr():
+    print 'app_browse_wr'
+
+''' wbm_ref
+Element consist from three main groups of items:
+?E - 	items in Editor (View, Insert, Modify)
+?F - 	items in Finder (Spreadsheet)
+?A - 	other items - Attributes from database IGNORE
+Note	"?" means any character.
+Each main group contains several items:
+F? = 	Field in Editor/Finder/other Attribute
+R? = 	Relation in Editor/Finder
+D? = 	Domain Name in Editor/Finder/other Attribute - IGNORE
+V? = 	Value in Editor/Finder/other Attribute - second field (IGNORE others)
+I? = 	Interval in Editor/Finder/other Attribute - IGNORE
+U? =    ???? - IGNORE
+Editor represents a window which is opened when the View, Insert or Modify button is clicked.
+Finder represents a Element's spreadsheet.
+Other items in Editor:
+TE = 	Tab
+BE = 	Border Name (start)
+bE = 	Border Name (end) - IGNORE
+RE = 	Radio button (start)
+rE = 	Radio button (end) - IGNORE
+CE = 	Check box Name
+or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
+'''
+def app_extract_wr():
+    print 'app_extract_wr'
+
 
 def app_open_files():
     global src_file
