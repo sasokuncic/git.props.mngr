@@ -7,7 +7,7 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  09.01.2014
+##  Created:  12.01.2014
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -17,6 +17,7 @@ from unicodedata import name
 import os.path
 from os import listdir
 from os.path import isfile, join
+import subprocess
 
 dict_sort = False
 ##const_editor = "D:\Usr\Install\Notepad2\Notepad2.exe "
@@ -61,7 +62,7 @@ def main_gui(root):
     rf = LabelFrame(f, relief=GROOVE, bd=2, text = "Props type")
     # Label(rf, text="Props type", width=18, height=2, anchor = W).pack(side=LEFT)
     props_type = IntVar()
-    for text, value in [('id', 1), ('asp', 2), ('txt', 3), ('file+id', 4), ('xml', 5)]:
+    for text, value in [('properties', 1), ('xml', 2), ('asp', 3)]:
         Radiobutton(rf, text=text, value=value, variable=props_type).pack(side=LEFT, padx=10)
     props_type.set(1)
     rf.pack(fill = BOTH, padx=10, pady=0)
@@ -116,7 +117,7 @@ def main_gui(root):
     Button(cf, text="  Close  ", command=app_close).pack(side=RIGHT, padx=10, pady=10)
     Button(cf, text="Combine", command=app_combine).pack(side=RIGHT, padx=5, pady=8)
     Button(cf, text="Compare", command=app_compare).pack(side=RIGHT, padx=5, pady=8)
-    Button(cf, text="OpenFiles", command=app_open_files).pack(side=LEFT, padx=5, pady=8)
+    Button(cf, text="OpenDir", command=app_open_files).pack(side=LEFT, padx=5, pady=8)
     Button(cf, text="Converter", command=app_open_web_utf8convertert).pack(side=LEFT, padx=5, pady=8)
     cf.pack(fill = BOTH, padx=0)
 
@@ -147,7 +148,7 @@ def app_browse_src():
         if cb_in_file_folder.get():
             src_id_in_file.clear()
             # combine all files with the src_extension into single file
-            fne = os.path.join(filepath, '_all_files' + src_extension)
+            fne = os.path.join(filepath, '_all_files' + src_dir + src_extension)
 ##            print 'app_browse_src(): file list name: ', fne
             if os.path.isfile(fne):
                 os.remove(fne)
@@ -623,14 +624,20 @@ def app_open_files():
     global ext_cmp
 
     filename = src_file.get()
-
-    fne = os.path.splitext(filename)[0]+ext_cmp
-    if os.path.isfile(fne):
-        os.system(const_editor + fne)
-
-    fne = os.path.splitext(filename)[0]+ext_comb
-    if os.path.isfile(fne):
-        os.system(const_editor + fne)
+    if os.path.isfile(filename):
+        (filepath, filename) = os.path.split(filename)
+        print 'filepath ', filepath
+        subprocess.Popen('explorer /select, "' + filepath + "'" )
+    else:
+        tkMessageBox.showerror('Error Opening File',
+                               'Unable to open file: %r. Browse for file again!' % filename)
+##    fne = os.path.splitext(filename)[0]+ext_cmp
+##    if os.path.isfile(fne):
+##        os.system(const_editor + fne)
+##
+##    fne = os.path.splitext(filename)[0]+ext_comb
+##    if os.path.isfile(fne):
+##        os.system(const_editor + fne)
 
 def app_open_web_utf8convertert():
     url = 'http://itpro.cz/juniconv/'
