@@ -1,17 +1,13 @@
 #-------------------------------------------------------------------------------
-# Name:        module1
-# Purpose:
-#
-# Author:      S.Kuncic
-#
-# Created:     07.01.2014
-# Licence:
-'''
- [] {} @ | \
-Universal Cyrillic decoder http://2cyr.com/decode/?lang=en
-jUniConv Unicode Characters to Java Entities Converter http://itpro.cz/juniconv/
-Windows 1251 CYRILLIC
-'''
+##  Name:     Properties_Manager
+##  Purpose:  Localised properties files management application
+##  = to check single properties file or directory for empty ids, substitute ; with ,
+##  = to compare src and dest files and report entries not in both files or directories
+##  = to expand text to import it into other applications (TEXTStat...)
+##  = to combine src and dest files or directories with files into single with intersedted entries
+##
+##  Author:   S.Kuncic
+##  Created:  09.01.2014
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -320,18 +316,19 @@ def app_browse_dest():
         (filepath, filename) = os.path.split(sel_file.name)
         (shortname, dest_extension) = os.path.splitext(filename)
         (parent_path, dest_dir) = os.path.split(filepath)
-        if src_extension != dest_extension and src_extension != '' and dest_extension != '':
-            tkMessageBox.showerror('Error Opening Dest File', \
-                               "Selected extensions of src (%s) and dest (%s) files are not the same!" % (src_extension, dest_extension))
-            dest_file.set('')
-            return
-        if src_dir == dest_dir and dest_dir != '':
-            tkMessageBox.showerror('Error Opening Dest File in Src Folder', \
-                               "Selected file is in the same directory (%s) as src file (%s)!" % (dest_dir, src_dir))
-            dest_file.set('')
-            return
 
         if cb_in_file_folder.get():
+            if src_extension != dest_extension and src_extension != '' and dest_extension != '':
+                tkMessageBox.showinfo('Info Opening Dest File', \
+                                   "Selected extensions of src (%s) and dest (%s) files are not the same! You could proceed or browse for new file!" % (src_extension, dest_extension))
+##                dest_file.set('')
+##                return
+            if src_dir == dest_dir and dest_dir != '':
+                tkMessageBox.showerror('Error Opening Dest File in Src Folder', \
+                                   "Selected file is in the same directory (%s) as src file (%s)!" % (dest_dir, src_dir))
+                dest_file.set('')
+                return
+
             # combine all files with the dest_extension into single file
             fne = os.path.join(filepath, '_all_files' + dest_extension)
 ##            print 'app_browse_src(): file list name: ', fne
@@ -355,7 +352,7 @@ def app_browse_dest():
             fned.close()
             dest_file.set(fne)
         else:
-            fd = open(dest_file.name)
+            fd = open(dest_file.get())
             fd.close()
         print 'app_browse_dest(): dest file name: ', dest_file.get()
     except Exception, e:
@@ -434,6 +431,8 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
     global ext_delimiter
     global ext_cmp
     global entry_empty
+    global cb_in_file_folder
+    global src_id_in_file
 
     # print filename
     # print ext_dict.keys()
@@ -442,7 +441,7 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
             os.remove(fne)
 
     fned = open(fne, 'w')
-
+    filename1 = ''
     if len(notin_dest) > 0:
         ldict = [x for x in notin_dest.iteritems()] # convert dictionary to the list
         if dict_sort:
@@ -450,8 +449,11 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
         # write header for notin_dest
         fned.write('######### Src File' + ext_delimiter + src_file.get() + '\n')
         fned.write('### Keys in src but not in dest' + ext_delimiter + str(len(notin_dest)) + '\n')
+
         for list_element in ldict:
-            fned.write(list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) + '\n')
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
+            fned.write(filename1 + list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) + '\n')
 
     if len(notin_src) > 0:
         ldict = [x for x in notin_src.iteritems()] # convert dictionary to the list
@@ -460,8 +462,11 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
         # write header for notin_src
         fned.write('######### Dest File' + ext_delimiter + dest_file.get() + '\n')
         fned.write('### Keys in dest but not in src' + ext_delimiter + str(len(notin_src)) + '\n')
+        ## xxx
         for list_element in ldict:
-            fned.write(list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
+            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
 
     fned.write('######### Empty items report #########\n')
     # Empty items in src and dest_dict
@@ -471,8 +476,11 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
         if dict_sort:
             ldict.sort(key=lambda x: x[0]) # sort by key
         fned.write('### Empty items in src and dest file' + ext_delimiter + str(len(emptysrc)) + '\n')
+        ## xxx
         for list_element in ldict:
-            fned.write(list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
+            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
 
     # Empty items in dest_dict only
     emptysrc = dict([(item,dest_dict[item]) for item in dest_dict.keys() if (src_dict.get(item)!=entry_empty) and (dest_dict.get(item)==entry_empty)])
@@ -481,8 +489,11 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
         if dict_sort:
             ldict.sort(key=lambda x: x[0]) # sort by key
         fned.write('### Empty items in dest file only' + ext_delimiter + str(len(emptysrc)) + '\n')
+        ## xxx
         for list_element in ldict:
-            fned.write(list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
+            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
 
     # Empty items in src_dict
     emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==entry_empty) and (dest_dict.get(item)!=entry_empty)])
@@ -491,8 +502,11 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
         if dict_sort:
             ldict.sort(key=lambda x: x[0]) # sort by key
         fned.write('### Empty items in src file only' + ext_delimiter + str(len(emptysrc)) + '\n')
+        ## xxx
         for list_element in ldict:
-            fned.write(list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
+            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
 
     semicolumns_src = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item).find(ext_delimiter)!=-1)])
     semicolumns_dest = dict([(item,dest_dict[item]) for item in dest_dict.keys() if (dest_dict.get(item).find(ext_delimiter)!=-1)])
@@ -502,15 +516,21 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
 
         fned.write('### Semicolumns in src file items: ' + ext_delimiter + str(len(semicolumns_src)) + '\n')
         ldict = [x for x in semicolumns_src.iteritems()] # convert dictionary to the list
+        ## xxx
         for list_element in ldict:
-            fned.write(list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) + '\n')
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
+            fned.write(filename1 + list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) + '\n')
 ##            list_element[1] = src_dict.get(list_element[0]).replace(ext_delimiter, ',')
             src_dict[list_element[0]] = src_dict.get(list_element[0]).replace(ext_delimiter, ',')
 
         fned.write('### Semicolumns in dest file items: ' + ext_delimiter + str(len(semicolumns_dest)) + '\n')
         ldict = [x for x in semicolumns_dest.iteritems()] # convert dictionary to the list
+        ## xxx
         for list_element in ldict:
-            fned.write(list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
+            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
             dest_dict[list_element[0]] = src_dict.get(list_element[0]).replace(ext_delimiter, ',')
 
     # Close the file.
@@ -552,6 +572,7 @@ def fun_save_combined(filename, intersection):
     global ext_delimiter
     global ext_comb
     global src_id_in_file
+    global cb_in_file_folder
 ##    global src_dir
 ##    global dest_dir
 
@@ -586,14 +607,13 @@ def fun_save_combined(filename, intersection):
 ##            dest_len = str(len(dest_str)) # potrebna je konverzija v utf-8
 ##            s_d_ratio = "{:.0%}".format((dest_len - src_len) / src_len * 100 )
             i +=1
-            src_len = '=(LEN(F%(s)s)-LEN(E%(s)s))/LEN(E%(s)s)' % {'s': str(i)} # Excel ratio formula
-            if cb_in_file_folder:
-                filename1 = src_id_in_file.get(list_element[0])
+            src_len = "=(LEN(F%(s)s)-LEN(E%(s)s))/LEN(E%(s)s)" % {'s': str(i)} ##  Excel ratio formula
+            if cb_in_file_folder.get():
+                filename1 = str(src_id_in_file.get(list_element[0]))
             fned.write(dirname + ext_delimiter + filename1 + ext_delimiter \
-                            + src_len + ext_delimiter\
-                            + list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) \
-                            + ext_delimiter + str(dest_dict.get(list_element[0])) \
-                            + '\n')
+                            + src_len + ext_delimiter \
+                            + str(list_element[0]) + ext_delimiter + str(src_dict.get(list_element[0])) \
+                            + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
     # Close the file.
     fned.close()
 
