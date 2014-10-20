@@ -7,7 +7,7 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  29.01.2014
+##  Created:  02.02.2014
 ##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
 ##               error - tooltip contains more ';', see more columns in xlsx file
 #-------------------------------------------------------------------------------
@@ -23,9 +23,9 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 dict_sort = False
-##const_editor = "D:\Usr\Install\Notepad2\Notepad2.exe "
+const_editor = "D:\Usr\Install\Notepad2\Notepad2.exe "
 ##const_editor = "Notepad.exe "
-const_editor = "D:\Programs\Notepad2\Notepad2.exe " # IT
+##const_editor = "D:\Programs\Notepad2\Notepad2.exe " # IT
 ext_extract = ".extr"
 ext_delimiter = ";"
 ext_terms = ".terms"
@@ -52,7 +52,7 @@ dest_dict = {}
 src_dir = ""
 dest_dir = ""
 src_extension = ""
-wr_ext_file = ""
+wr_extr_file = ""
 
 def main_gui(root):
     global rb_props_type
@@ -127,7 +127,7 @@ def main_gui(root):
     Entry(wf, bd = 2, fg = "blue", width =60, textvariable=wr_file).pack(side=LEFT, padx=10)
     wr_file.set("")
     Button(wf, text="...", command=app_browse_wr).pack(side=LEFT, padx=5, pady=8)
-    Button(wf, text="Extract", command=app_extract_wr).pack(side=RIGHT, padx=5, pady=8)
+    Button(wf, text="ExtrCtx", command=app_extract_wr).pack(side=RIGHT, padx=5, pady=8)
     wf.pack(fill = BOTH, padx=10, pady=0)
 
     cf = Frame(f, relief=GROOVE, borderwidth=0)
@@ -804,17 +804,25 @@ or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI
 
 def app_extract_wr():
     global wr_dict
-    global wr_ext_file
+    global wr_extr_file
 
-    print 'app_extract_wr'
-    fname_wr = "D:\Portable Python 2.7.5.1\__py_term_apps\wbm_ref.txt" #
-    wr_dict = app_extract_wbm_ref(fname_wr)
-##    wr_dict = app_extract_wbm_ref(wr_dict.name)
+    fname_wr = wr_file.get()
+    fname_wr = "D:\Portable Python 2.7.5.1\__py_term_apps\wbm_ref.txt" # for testing
 
-    if len(wr_dict) > 0:
-        fun_save_wr_extracted(fname_wr, wr_dict)
-        if cb_open_txt.get() == 1:
-            os.system(const_editor + wr_ext_file)
+    if fname_wr != "":
+        wr_dict = app_extract_wbm_ref(fname_wr)
+    ##    wr_dict = app_extract_wbm_ref(wr_dict.name)
+
+        if len(wr_dict) > 0 and src_file.get() == '':
+            fun_save_wr_extracted(fname_wr, wr_dict)
+            if cb_open_txt.get() == 1:
+                os.system(const_editor + wr_extr_file)
+        elif len(src_dict) > 0 and len(wr_dict) > 0:
+            print "src_file.get() not empty - add context to _ctx.extr"
+            fun_save_src_ctx_extracted(src_file.get(), src_dict)
+        elif src_file.get() != '' and len(wr_dict) > 0:
+            tkMessageBox.showinfo('Attach context to Source file', \
+                    "Extract Source file and click ExtrCtx again!")
 
 # multiple values for one key,
 class mdict(dict):
@@ -908,14 +916,14 @@ def fun_save_wr_extracted(filename, ext_dict):
     from collections import Counter
     global ext_extract
     global ext_delimiter
-    global wr_ext_file
+    global wr_extr_file
     global wr_types_used
     wr_types_in_line = []
     wr_types_in_line2 = []
     wr_types_in_line = ['0' for x in range(len(wr_types_used))]
     print wr_types_used
     print wr_types_in_line
-    ext_extract = '.extr'
+    ext_extract = '_wr.extr'
     ext_delimiter = ';'
     list_elem1 = ''
     # print filename
@@ -924,7 +932,7 @@ def fun_save_wr_extracted(filename, ext_dict):
     if os.path.isfile(fne):
             os.remove(fne)
     ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
-    wr_ext_file = fne
+    wr_extr_file = fne
     # write to files
     fned = open(fne, 'w')
     fned.write('SW-ID' + ext_delimiter + 'TypesSum' + ext_delimiter + ext_delimiter.join(wr_types_used) + '\n')
@@ -959,6 +967,32 @@ def fun_save_wr_extracted(filename, ext_dict):
     # Close the file.
     fned.close()
 
+
+# save dictionary into file
+# generate .terms file with localized text onla to import it into TEXTStat
+def fun_save_src_ctx_extracted(filename, ext_dict):
+    global dict_sort
+    global ext_delimiter
+    ext_extract_with_ctx = '_with_ctx.extr'
+
+    # print filename
+    # print ext_dict.keys()
+    fne = os.path.splitext(filename)[0]+ext_extract_with_ctx
+    if os.path.isfile(fne):
+            os.remove(fne)
+    ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
+    if dict_sort:
+        ldict.sort(key=lambda x: x[0]) # sort by key
+    # write to files
+    fned = open(fne, 'w')
+    for list_element in ldict:
+        # check for the ctx
+        list_element_ctx = ext_delimiter + '-1'
+        fned.write(list_element[0] + ext_delimiter + list_element[1] + list_element_ctx + '\n')
+    # Close the file.
+    fned.close()
+    if cb_open_txt.get() == 1:
+       os.system(const_editor + fne)
 
 def app_open_files():
     global src_file
