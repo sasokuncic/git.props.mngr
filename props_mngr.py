@@ -7,9 +7,11 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  04.02.2014
+##  Created:  06.02.2014
 ##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
 ##               error - tooltip contains more ';', see more columns in xlsx file
+##   Problem - Extract to file, all files in folder ne dela
+##   Spremenjeno podpi?je v tab za uvoz v Excel
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -42,7 +44,8 @@ PRP_TYP_PROPERTIES = 1
 PRP_TYP_XML = 2
 PRP_TYP_ASP = 3
 
-OTFL_DLMTR = ";"
+OTFL_DLMTR = "\t"
+WRFL_DLMTR = ";"
 OTFL_DLMTR_RPLC = ','
 EMPTY_ENTRY = 'xxx'
 
@@ -316,7 +319,7 @@ def app_extract_src():
     src_dict = fun_extract(fn)
     if cb_extr_to_file.get():
         # save to .term and .extr file
-        fun_save_extracted(fn, src_dict, wr_dict)
+        fun_save_extracted(fn, src_dict)
 
 def fun_extract(filename):
     global PROPS_ID_DLMTR
@@ -383,7 +386,7 @@ def fun_extract(filename):
 
 # save dictionary into file
 # generate .terms file with localized text onla to import it into TEXTStat
-def fun_save_extracted(filename, pext_dict, pwp_dict):
+def fun_save_extracted(filename, pext_dict):
     global SORT_DICT
     global SUFF_EXT_EXTRACT
     global OTFL_DLMTR
@@ -391,6 +394,7 @@ def fun_save_extracted(filename, pext_dict, pwp_dict):
     global SUFF_EXT_CMP
     global SUFF_EXT_COMB
     global wr_types_used
+    global wr_dict
     NOT_FOUND = 'xxx'
 
     # print filename
@@ -401,7 +405,7 @@ def fun_save_extracted(filename, pext_dict, pwp_dict):
     fnt = os.path.splitext(filename)[0]+SUFF_EXT_TERMS
     if os.path.isfile(fnt):
             os.remove(fnt)
-    wp_dict_len = len(pwp_dict)
+    wp_dict_len = len(wr_dict)
     wr_types_in_line = []
     wr_types_in_line2 = []
     wr_types_in_line = ['0' for x in range(len(wr_types_used))]
@@ -419,7 +423,7 @@ def fun_save_extracted(filename, pext_dict, pwp_dict):
     for list_element in ldict:
         list_element_ctx = ''
         if wp_dict_len:
-            el_ctx = pwp_dict.get(list_element[1], NOT_FOUND)
+            el_ctx = wr_dict.get(list_element[1], NOT_FOUND)
             ln += 1
             excel_str = OTFL_DLMTR + '=SUM(D' + str(ln) + ':AH' + str(ln) + ')' + OTFL_DLMTR
             if el_ctx == NOT_FOUND:
@@ -553,7 +557,7 @@ def app_extract_dest():
     dest_dict = fun_extract(fn)
 # save to .term and .extr file
     if cb_extr_to_file.get():
-        fun_save_extracted(fn, dest_dict, wr_dict)
+        fun_save_extracted(fn, dest_dict)
 
 def app_compare():
     global root
@@ -877,6 +881,8 @@ class mdict(dict):
 #    or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
 def app_extract_wbm_ref(filename):
     global wr_types_used
+    global WRFL_DLMTR
+
     wr_types_all = ['BE', 'DF', 'DE', 'DA', 'FA', 'FE', 'FF', 'FG', 'RE', 'RF', \
                     'TE', 'VA', 'E', 'VE', 'VF', 'EG', 'XA', 'XF', 'CE', 'XE',  \
                     'EX', 'IA', 'IE', 'IF', 'bE', 'SW', 'UE', 'UF', 'UA']  # 29 types
@@ -889,7 +895,6 @@ def app_extract_wbm_ref(filename):
                     'CE':5, 'RE':6, 'RF':7, 'FE':8, 'FF':9, 'FA':10, \
                     'VE':11, 'VF':12, 'DA':13, 'DF':14, 'DE': 15 }
     tmc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # counters for used types in src_file
-    OTFL_DLMTR = ";"
 
     fdline = 0
     src_entry = []
@@ -906,7 +911,7 @@ def app_extract_wbm_ref(filename):
         for src_line in fd:
             fdline += 1
             src_line = src_line.rstrip('\n')
-            src_entry=src_line.split(OTFL_DLMTR) # split line into entries
+            src_entry=src_line.split(WRFL_DLMTR) # split line into entries
             wr_entry_stat[len(src_entry)] += 1 # update statistic numb of elem in entry
             if len(src_entry) > 1:
                 # types statistic
@@ -967,7 +972,7 @@ def fun_save_wr_extracted(filename, ext_dict):
     global wr_types_used
 
     SUFF_EXT_EXTRACT = '_wr.extr'
-    OTFL_DLMTR = ';'
+##    OTFL_DLMTR = ';'
 
     wr_types_in_line = []
     wr_types_in_line2 = []
