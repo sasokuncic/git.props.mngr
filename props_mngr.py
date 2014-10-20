@@ -3,14 +3,14 @@
 ##  Purpose:
 ##  = to check single properties file or directory for empty ids, substitute ; with ,
 ##  = to compare src and dest files and report entries not in both files or directories
-##  = to export text to import it into other applications (TEXTStat...)
+##  = to export text to import it into another applications
 ##  = to combine src and dest files or directories with files into single one
 ##  = to generate file from src or dest with context info from wbm_ref file
 ##  = to support codepage converstion from UTF8 before import into Excel (*.comb) file
 ##  = to open source directory to access files
 ##
 ##  Author:   S.Kuncic
-##  Created:  07.04.2014
+##  Created:  08.04.2014
 ##  TBD:
 ##  = xml tested, ok, ru xml must be in utf8 (convert it before you use it)
 ##  = tooltip contains more ';', see more columns in xlsx file
@@ -508,7 +508,7 @@ def app_browse_dest():
                 return
 
             # combine all files with the dest_extension into single file
-            fne = os.path.join(filepath, PREF_FLS_FLDR + dest_extension)
+            fne = os.path.join(filepath, PREF_FLS_FLDR + dest_dir + dest_extension)
 ##            print 'app_browse_src(): file list name: ', fne
             if os.path.isfile(fne):
                 os.remove(fne)
