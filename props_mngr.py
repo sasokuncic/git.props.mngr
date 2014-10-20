@@ -1,17 +1,20 @@
 #-------------------------------------------------------------------------------
 ##  Name:     Properties_Manager
-##  Purpose:  Localised properties files management application
+##  Purpose:  Software properties files management application
 ##  = to check single properties file or directory for empty ids, substitute ; with ,
 ##  = to compare src and dest files and report entries not in both files or directories
 ##  = to expand text to import it into other applications (TEXTStat...)
-##  = to combine src and dest files or directories with files into single with intersedted entries
+##  = to combine src and dest files or directories with files into single one
+##  = to report properties context match in src files (context is defined in wbm_ref file)
+##  = to convert ru txt codepage in combined(*.comb) file
+##  = to open source directory to access files
 ##
 ##  Author:   S.Kuncic
-##  Created:  11.02.2014
+##  Created:  06.04.2014
+##  Issues:
 ##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
-##               error - tooltip contains more ';', see more columns in xlsx file
-##   Problem - Extract to file, all files in folder ne dela
-##   Spremenjeno podpi?je v tab za uvoz v Excel
+##   tooltip contains more ';', see more columns in xlsx file
+##   Extract to file, all files in folder - doesn't work
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -24,7 +27,6 @@ from os.path import isfile, join
 import subprocess
 import xml.etree.ElementTree as ET
 
-##USED_EDITOR = "D:\Usr\Install\Notepad2\Notepad2.exe " # kunciclap
 USED_EDITOR = "Notepad.exe "
 ##USED_EDITOR = "D:\Programs\Notepad2\Notepad2.exe " # IT
 ##USED_EDITOR = "C:\Program Files\PSPad editor\PSPad.exe " # IT
@@ -45,17 +47,18 @@ PRP_TYP_PROPERTIES = 1
 PRP_TYP_XML = 2
 PRP_TYP_ASP = 3
 
-OTFL_DLMTR = '\t'  # ';'
-WRFL_DLMTR = ";" # delimiter used in wbm_ref file
-OTFL_DLMTR_RPLC = '   ' #','
+OTFL_DLMTR = '\t'  # output files delimiter
+WRFL_DLMTR = ";"   # delimiter used in wbm_ref file
+OTFL_DLMTR_RPLC = '   ' # ','
 EMPTY_ENTRY = 'xxx'
 
 # define options for opening a file
 options = {}
 options['defaultextension'] = '*.*'
-options['filetypes'] = [('all file types', '.*'), ('properties files', '.properties'), ('asp', '.asp'), ('xml', '.xml') ]
+## options['filetypes'] = [('properties files', '.properties'), ('asp', '.asp'), ('xml', '.xml'), ('all file types', '.*')]
+options['filetypes'] = [('properties files', '.properties'), ('xml', '.xml'), ('all file types', '.*')]
 options['initialdir'] = os.getcwd()
-options['title'] = 'Select properties file (select Props type checkbuttons also)'
+options['title'] = 'Select file with properties (select Props type checkbuttons also)'
 
 src_dict = {}
 src_id_in_file = {}
@@ -69,13 +72,12 @@ wr_dict = {}
 wr_extr_file = ""
 wr_types_used = []
 
-# GUI
+# application GUI
 def main_gui(root):
     global rb_props_type
     global src_file
     global dest_file
     global wr_file
-    global cb_rm_whitespaces
     global cb_open_txt
     global cb_extr_to_file
     global cb_in_file_folder
@@ -84,21 +86,18 @@ def main_gui(root):
 ##    global PRP_TYP_ASP
 
     f = Frame(root, width=600, height=400)
+    root.title("Properties Manager")
 
     rf = LabelFrame(f, relief=GROOVE, bd=2, text = "Props type")
     # Label(rf, text="Props type", width=18, height=2, anchor = W).pack(side=LEFT)
     rb_props_type = IntVar()
-    for text, value in [('properties', PRP_TYP_PROPERTIES), ('xml', PRP_TYP_XML), ('asp', PRP_TYP_ASP)]:
+    for text, value in [('properties', PRP_TYP_PROPERTIES), ('xml', PRP_TYP_XML)]:  #, ('asp', PRP_TYP_ASP)]:
         Radiobutton(rf, text=text, value=value, variable=rb_props_type).pack(side=LEFT, padx=10)
     rb_props_type.set(PRP_TYP_PROPERTIES)
     rf.pack(fill = BOTH, padx=10, pady=0)
 
     # Checkbuttons frame
     cf = LabelFrame(f, relief=GROOVE, bd=2, text = "Options")
-    # Label Remove whitespaces, checkbox
-##    cb_rm_whitespaces = IntVar()
-##    Checkbutton(cf, text = "Remove whitespaces", variable = cb_rm_whitespaces, anchor = W, \
-##                     onvalue = 1, offvalue = 0, height=1).pack(side=LEFT, padx=5)
 
     # Label Open txt editor, checkbox
     cb_open_txt = IntVar()
@@ -153,7 +152,7 @@ def main_gui(root):
     Button(cf, text="  Close  ", command=app_close).pack(side=RIGHT, padx=10, pady=10)
     Button(cf, text="Combine", command=app_combine).pack(side=RIGHT, padx=5, pady=8)
     Button(cf, text="Compare", command=app_compare).pack(side=RIGHT, padx=5, pady=8)
-##    Button(cf, text="OpenDir", command=app_open_files).pack(side=LEFT, padx=5, pady=8)
+    Button(cf, text="Open Source Dir", command=app_open_srcdir).pack(side=LEFT, padx=5, pady=8)
     Button(cf, text="UTF8webConv", command=app_open_web_utf8convertert).pack(side=LEFT, padx=5, pady=8)
     cf.pack(fill = BOTH, padx=0)
 
@@ -220,17 +219,18 @@ def app_browse_src():
             tree = ET.parse(sel_file.name) # xml_file_asp # xml_file_mp
             xmlroot = tree.getroot()
             if xmlroot.find('Section')!=None:
-                # extr_xml_mp:  Section / Msg - parent Name, element Id , element Name + text
+                # extr_xml_mp (PQMS product):  Section / Msg - parent Name, element Id , element Name + text
                 fnnew = extr_xml_mp(xmlroot, sel_file.name)
             elif xmlroot.find('phrases')!=None:
-                # extr_xml_aa: find phrases / phrase - attribure key + text
+                # extr_xml_aa (AA6191AX - DSR product): find phrases / phrase - attribure key + text
                 fnnew = extr_xml_aa(xmlroot, sel_file.name)
             src_file.set(fnnew)
 
         elif rb_props_type.get() == PRP_TYP_ASP:
             print 'asp, single file. cb_in_file_folder ignored'
             # create more language depandent .properties files *_en/_ru/_sl
-            # update src_file *_en, change rb to 1, info to
+            # update src_file *_en, change rb to 1
+            # TBD
 
         else:
             print 'tkMessageBox: Not supported src input combination!'
@@ -242,8 +242,9 @@ def app_browse_src():
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
-'''
-'''
+##
+##  Replace content in xml files that cannot be translated
+##
 def escape_html(data):
     data = data.replace("&amp;","&").replace("&quot;",'"').replace("&gt;",">").replace("&lt;","<").replace("\n","")
     data = data.replace('\\<','<').replace('\\>','>').replace('</','<')
@@ -251,6 +252,10 @@ def escape_html(data):
     data2 = data.strip(' ').strip(':')
     return data2
 
+##
+## PQMS product specific XML:
+##   Section / Msg - parent Name, element Id , element Name + text
+##
 def extr_xml_mp(root, filename):
     global SUFF_EXT_PROPS
     global PROPS_ID_DLMTR
@@ -279,6 +284,9 @@ def extr_xml_mp(root, filename):
     fned.close()
     return fne
 
+##
+## AA6191AX - DSR product specific XML
+##   find phrases / phrase - attribure key + text
 def extr_xml_aa(root, filename):
     global SUFF_EXT_PROPS
     global PROPS_ID_DLMTR
@@ -299,6 +307,9 @@ def extr_xml_aa(root, filename):
     fned.close()
     return fne
 
+##
+## Open source file to extract keys
+##
 def app_extract_src():
     global rb_props_type
     global src_file
@@ -309,14 +320,6 @@ def app_extract_src():
     global cb_in_file_folder
 
     src_dict = {}
-    # debug xxx
-##    fname_small = "D:\Portable Python 2.7.5.1\__py_term_apps\messages_en_small.properties"
-##    fname = 'D:/Portable Python 2.7.5.1/__py_term_apps/messages_en.properties'
-##    src_file.set('D:\Portable Python 2.7.5.1\__py_term_apps\messages_en_small.properties')
-##    src_dir = "__py_term_apps"
-##        (filepath, filename) = os.path.split(sel_file.name)
-##        (parent_path, dirname) = os.path.split(filepath)
-##        dest_dir = dirname
     fn = src_file.get()
     src_dict = fun_extract(fn)
     if cb_extr_to_file.get():
@@ -387,7 +390,7 @@ def fun_extract(filename):
     return ext_dict
 
 # save dictionary into file
-# generate .terms file with localized text onla to import it into TEXTStat
+# generate .terms file with localized text only to import it into TEXTStat
 def fun_save_extracted(filename, pext_dict):
     global SORT_DICT
     global SUFF_EXT_EXTRACT
@@ -467,8 +470,10 @@ def fun_save_extracted(filename, pext_dict):
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
 
+# Browse for destination file
+# or if cb_in_file_folder selected for all files in the current directory
+#                                  with the same suffix as selected file
 def app_browse_dest():
-    # http://tkinter.unpythonic.net/wiki/tkFileDialog
     global root
     global dest_file
     global dest_dir
@@ -557,6 +562,9 @@ def app_browse_dest():
                                'Unable to open file: %r' % sel_file.name)
     options['initialdir'] = dest_dir
 
+##
+## Open destination file to extract keys
+##
 def app_extract_dest():
     global rb_props_type
     global dest_file
@@ -565,11 +573,6 @@ def app_extract_dest():
     global cb_extr_to_file
     global wr_dict
 
-    # debug xxx
-##    fname_small = "D:\Portable Python 2.7.5.1\__py_term_apps\messages_ru_id-as-str_small.properties"
-##    fname = 'D:/Portable Python 2.7.5.1/__py_term_apps/messages_ru_id-as-str.properties'
-##    dest_file.set('D:/Portable Python 2.7.5.1/__py_term_apps/messages_ru_id-as-str_small.properties')
-##    dest_dir = "__py_term_apps"
     fn = dest_file.get()
 ##    print "dest_file_name: ", fn
     dest_dict = {}
@@ -578,6 +581,9 @@ def app_extract_dest():
     if cb_extr_to_file.get():
         fun_save_extracted(fn, dest_dict)
 
+##
+## Compare source and destination keys and generate differences
+##
 def app_compare():
     global root
     global src_file
@@ -738,6 +744,9 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
 
+##
+## Combine source and destination file
+##
 def app_combine():
     global root
     global src_file
@@ -816,8 +825,12 @@ def fun_save_combined(filename, intersection):
                             + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
     # Close the file.
     fned.close()
+    if cb_open_txt.get() == 1:
+       os.system(USED_EDITOR + fne)
 
-
+##
+## Browse for wbm_ref file
+##
 def app_browse_wr():
     global wr_file # src_file
     global wr_dir # src_dir
@@ -848,7 +861,9 @@ def app_browse_wr():
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
-
+##
+## Extract context from wbm_ref file
+##
 def app_extract_wr():
     global wr_dict
     global wr_extr_file
@@ -1074,7 +1089,7 @@ def fun_save_src_ctx_extracted(filename, ext_dict):
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
 
-def app_open_files():
+def app_open_srcdir():
     global src_file
     global SUFF_EXT_COMB
     global SUFF_EXT_CMP
@@ -1082,14 +1097,17 @@ def app_open_files():
     global cb_in_file_folder
 
     filename = src_file.get()
+    if filename == "":
+        tkMessageBox.showerror('Error Opening Src Directory',
+                               'Source file not selected. Browse for file and click again!')
+    elif os.path.isfile(filename):
+        (filepath, filename) = os.path.split(filename)
+        print 'filepath ', filepath
+        os.startfile(filepath)
+    else:
+        tkMessageBox.showerror('Error Opening Src Directory',
+                               'Source file: %r. Browse for file again!' % filename)
 
-##    if os.path.isfile(filename):
-##        (filepath, filename) = os.path.split(filename)
-##        print 'filepath ', filepath
-##        subprocess.Popen('explorer /select, "' + filepath + "'" )
-##    else:
-##        tkMessageBox.showerror('Error Opening File',
-##                               'Unable to open file: %r. Browse for file again!' % filename)
 ##    fne = os.path.splitext(filename)[0]+SUFF_EXT_CMP
 ##    if os.path.isfile(fne):
 ##        os.system(USED_EDITOR + fne)
@@ -1100,8 +1118,10 @@ def app_open_files():
 
 def app_open_web_utf8convertert():
     url = 'http://itpro.cz/juniconv/'
-##    http://2cyr.com/decode/?lang=en
+    ##  additonal useful  url  http://2cyr.com/decode/?lang=en
     webbrowser.open_new_tab(url)
+    tkMessageBox.showinfo('Hint',
+                       'Copy-Paste content to Input field, select Direction "Java entities >> UTF-8 text" and click Convert!')
 
 def app_close():
     global root
