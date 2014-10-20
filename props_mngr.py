@@ -1,20 +1,20 @@
 #-------------------------------------------------------------------------------
 ##  Name:     Properties_Manager
-##  Purpose:  Software properties files management application
+##  Purpose:
 ##  = to check single properties file or directory for empty ids, substitute ; with ,
 ##  = to compare src and dest files and report entries not in both files or directories
-##  = to expand text to import it into other applications (TEXTStat...)
+##  = to export text to import it into other applications (TEXTStat...)
 ##  = to combine src and dest files or directories with files into single one
-##  = to report properties context match in src files (context is defined in wbm_ref file)
-##  = to convert ru txt codepage in combined(*.comb) file
+##  = to generate file from src or dest with context info from wbm_ref file
+##  = to support codepage converstion from UTF8 before import into Excel (*.comb) file
 ##  = to open source directory to access files
 ##
 ##  Author:   S.Kuncic
-##  Created:  06.04.2014
-##  Issues:
-##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
-##   tooltip contains more ';', see more columns in xlsx file
-##   Extract to file, all files in folder - doesn't work
+##  Created:  07.04.2014
+##  TBD:
+##  = xml tested, ok, ru xml must be in utf8 (convert it before you use it)
+##  = tooltip contains more ';', see more columns in xlsx file
+##  = asp properties files support
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -28,15 +28,18 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 USED_EDITOR = "Notepad.exe "
-##USED_EDITOR = "D:\Programs\Notepad2\Notepad2.exe " # IT
-##USED_EDITOR = "C:\Program Files\PSPad editor\PSPad.exe " # IT
+##USED_EDITOR = "D:\Programs\Notepad2\Notepad2.exe " # IT lap editor
 
 SORT_DICT = False
-SUFF_EXT_EXTRACT = ".extr"
-SUFF_EXT_TERMS = ".terms"
-SUFF_EXT_CMP = ".cmp"
-SUFF_EXT_COMB = ".comb"
 SUFF_EXT_PROPS = ".properties"
+
+## Generated files extensions
+PREF_FLS_FLDR = '_all_files_' # prefix of file with all files in folder
+SUFF_EXT_EXTRACT = ".extr" # extracted keys
+SUFF_EXT_TERMS = ".terms" # not implemented (SUFF_EXT_EXTRACT used instead)
+SUFF_EXT_CMP = ".cmp" # src-dest comparision
+SUFF_EXT_COMB = ".comb" # src+dest combination
+SUFF_EXT_EXTRACT_WITH_CTX = '_wr.extr' # src+ctx
 
 PROPS_SUB_DLMTR = "."
 PROPS_ID_DLMTR = "="
@@ -71,8 +74,9 @@ dest_dir = ""
 wr_dict = {}
 wr_extr_file = ""
 wr_types_used = []
-
-# application GUI
+#
+# Application GUI
+#
 def main_gui(root):
     global rb_props_type
     global src_file
@@ -81,9 +85,6 @@ def main_gui(root):
     global cb_open_txt
     global cb_extr_to_file
     global cb_in_file_folder
-##    global PRP_TYP_PROPERTIES
-##    global PRP_TYP_XML
-##    global PRP_TYP_ASP
 
     f = Frame(root, width=600, height=400)
     root.title("Properties Manager")
@@ -155,12 +156,11 @@ def main_gui(root):
     Button(cf, text="Open Source Dir", command=app_open_srcdir).pack(side=LEFT, padx=5, pady=8)
     Button(cf, text="UTF8webConv", command=app_open_web_utf8convertert).pack(side=LEFT, padx=5, pady=8)
     cf.pack(fill = BOTH, padx=0)
-
     f.pack()
 
 # Browse for source file
-# or if cb_in_file_folder selected for all files in the current directory
-#                                  with the same suffix as selected file
+#    or if cb_in_file_folder selected for all files in the current directory
+#                                     with the same suffix as selected file
 def app_browse_src():
     global root
     global src_file
@@ -169,7 +169,8 @@ def app_browse_src():
     global options
     global rb_props_type
     global cb_in_file_folder
-    global src_id_in_file
+    global src_id_in_file0
+    global PREF_FLS_FLDR
 
     # For details see http://tkinter.unpythonic.net/wiki/tkFileDialog
     sel_file = tkFileDialog.askopenfile(mode='r', **options)
@@ -186,7 +187,7 @@ def app_browse_src():
 ##            print 'properties, all files in directory'
             src_id_in_file.clear()
             # combine all files with the src_extension into single file
-            fne = os.path.join(filepath, '_all_files' + src_dir + src_extension)
+            fne = os.path.join(filepath, PREF_FLS_FLDR + src_dir + src_extension)
 ##            print 'app_browse_src(): file list name: ', fne
             if os.path.isfile(fne):
                 os.remove(fne)
@@ -242,20 +243,19 @@ def app_browse_src():
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
-##
-##  Replace content in xml files that cannot be translated
-##
+#
+#  Replace content in xml files that cannot be translated
+#
 def escape_html(data):
     data = data.replace("&amp;","&").replace("&quot;",'"').replace("&gt;",">").replace("&lt;","<").replace("\n","")
     data = data.replace('\\<','<').replace('\\>','>').replace('</','<')
     data = data.replace('</i>','').replace('<br/>','').replace("<i>",'').replace("<br>",'').replace('  ',' ')
     data2 = data.strip(' ').strip(':')
     return data2
-
-##
-## PQMS product specific XML:
-##   Section / Msg - parent Name, element Id , element Name + text
-##
+#
+# PQMS product specific XML:
+#   Section / Msg - parent Name, element Id , element Name + text
+#
 def extr_xml_mp(root, filename):
     global SUFF_EXT_PROPS
     global PROPS_ID_DLMTR
@@ -280,13 +280,12 @@ def extr_xml_mp(root, filename):
             fned.write(parent.attrib.get('Name') + PROPS_SUB_DLMTR \
                         + elem.attrib.get('Id') + PROPS_SUB_DLMTR \
                         + elem.attrib.get('Name') + PROPS_ID_DLMTR + str(elemstr) + '\n')
-    # Close the file.
     fned.close()
     return fne
 
-##
-## AA6191AX - DSR product specific XML
-##   find phrases / phrase - attribure key + text
+#
+# AA6191AX - DSR product specific XML
+#   find phrases / phrase - attribure key + text
 def extr_xml_aa(root, filename):
     global SUFF_EXT_PROPS
     global PROPS_ID_DLMTR
@@ -303,13 +302,12 @@ def extr_xml_aa(root, filename):
 ##                print '   ID:       ', elem.attrib.get('key'), '\n   TEXT:     ', child.text
                 fned.write(elem.attrib.get('key') + PROPS_ID_DLMTR \
                             + child.text + '\n')
-    # Close the file.
     fned.close()
     return fne
 
-##
-## Open source file to extract keys
-##
+#
+# Open source file to extract keys
+#
 def app_extract_src():
     global rb_props_type
     global src_file
@@ -323,9 +321,11 @@ def app_extract_src():
     fn = src_file.get()
     src_dict = fun_extract(fn)
     if cb_extr_to_file.get():
-        # save to .term and .extr file
+        # save to .extr file
         fun_save_extracted(fn, src_dict)
-
+#
+# Extract properties
+#
 def fun_extract(filename):
     global PROPS_ID_DLMTR
     global PROPS_COMM_1ST_CHR
@@ -383,14 +383,14 @@ def fun_extract(filename):
             "Number of entries:\n\n one-word:" + str(nmb_src_enties1w) + "\n two-words:" + str(nmb_src_enties2w) + \
                     "\n comments: " + str(nmbs_commnets) + "\n undefined: " +  str(nmbs_other) + \
                     "\n files (in merged file):" + str(nmb_file_names))
-
     except IOError, NameError:
         tkMessageBox.showerror('Error Opening File',
                                'Unable to open file: %r' % filename)
     return ext_dict
 
-# save dictionary into file
-# generate .terms file with localized text only to import it into TEXTStat
+#
+# Save dictionary into SUFF_EXT_EXTRACT file
+#
 def fun_save_extracted(filename, pext_dict):
     global SORT_DICT
     global SUFF_EXT_EXTRACT
@@ -402,7 +402,7 @@ def fun_save_extracted(filename, pext_dict):
     global cb_open_txt
     global wr_types_used
     global wr_dict
-    global src_id_in_file ################ include id to file mapping
+    global src_id_in_file ## include id to file mapping
     NOT_FOUND = 'xxx'
 
     # print filename
@@ -464,7 +464,6 @@ def fun_save_extracted(filename, pext_dict):
                     + list_element[1].replace(OTFL_DLMTR, OTFL_DLMTR_RPLC) \
                     + list_element_ctx + '\n')
 ##        fntd.write(list_element[1] + '\n')
-    # Close the file.
     fned.close()
 ##    fntd.close()
     if cb_open_txt.get() == 1:
@@ -481,6 +480,7 @@ def app_browse_dest():
     global rb_props_type
     global cb_in_file_folder
     global dest_extension
+    global PREF_FLS_FLDR
 
     sel_file = tkFileDialog.askopenfile(mode='r', **options)
     if not sel_file:
@@ -508,7 +508,7 @@ def app_browse_dest():
                 return
 
             # combine all files with the dest_extension into single file
-            fne = os.path.join(filepath, '_all_files' + dest_extension)
+            fne = os.path.join(filepath, PREF_FLS_FLDR + dest_extension)
 ##            print 'app_browse_src(): file list name: ', fne
             if os.path.isfile(fne):
                 os.remove(fne)
@@ -550,9 +550,9 @@ def app_browse_dest():
 
         elif rb_props_type.get() == PRP_TYP_ASP:
             print 'asp, single file. cb_in_file_folder ignored'
+            # TBD
             # create more language depandent .properties files *_en/_ru/_sl
             # update src_file *_en, change rb to 1, info to
-
         else:
             print 'tkMessageBox: Not supported src input combination!'
         print 'app_browse_dest(): dest file name: ', dest_file.get()
@@ -562,9 +562,9 @@ def app_browse_dest():
                                'Unable to open file: %r' % sel_file.name)
     options['initialdir'] = dest_dir
 
-##
-## Open destination file to extract keys
-##
+#
+# Extract keys from destination file
+#
 def app_extract_dest():
     global rb_props_type
     global dest_file
@@ -577,13 +577,12 @@ def app_extract_dest():
 ##    print "dest_file_name: ", fn
     dest_dict = {}
     dest_dict = fun_extract(fn)
-# save to .term and .extr file
+# save to .extr file
     if cb_extr_to_file.get():
         fun_save_extracted(fn, dest_dict)
-
-##
-## Compare source and destination keys and generate differences
-##
+#
+# Compare source and destination keys and report differences
+#
 def app_compare():
     global root
     global src_file
@@ -623,8 +622,9 @@ def app_compare():
 ##        # dialogbox
 ##        print "app_compare(): Empty dest_dict! Run Extract!"
 
-# save sorted dictionary into file
-# generate .terms file with localized text onla to import it into TEXTStat
+#
+# Save comparision results
+#
 def fun_save_cmpared(filename, notin_dest, notin_src):
     global cb_open_txt
     global src_file
@@ -695,7 +695,7 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
         if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
         fned.write('### Empty items in dest file only' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
-        ## xxx
+
         for list_element in ldict:
             if cb_in_file_folder.get():
                 id_flnm = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
@@ -708,7 +708,7 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
         if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
         fned.write('### Empty items in src and dest file' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
-        ## xxx
+
         for list_element in ldict:
             if cb_in_file_folder.get():
                 id_flnm = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
@@ -722,7 +722,6 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
 
         fned.write('### Semicolumns in src file items: ' + OTFL_DLMTR + str(len(semicolumns_src)) + '\n')
         ldict = [x for x in semicolumns_src.iteritems()] # convert dictionary to the list
-        ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
                 id_flnm = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
@@ -732,21 +731,17 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
 
         fned.write('### Semicolumns in dest file items: ' + OTFL_DLMTR + str(len(semicolumns_dest)) + '\n')
         ldict = [x for x in semicolumns_dest.iteritems()] # convert dictionary to the list
-        ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
                 id_flnm = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
             fned.write(id_flnm + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
             dest_dict[list_element[0]] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, OTFL_DLMTR_RPLC)
-
-    # Close the file.
     fned.close()
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
-
-##
-## Combine source and destination file
-##
+#
+# Combine source and destination file
+#
 def app_combine():
     global root
     global src_file
@@ -768,9 +763,9 @@ def app_combine():
     if len(dest_dict) == 0:
         # dialogbox
         print "app_compare(): Empty dest_dict! Run Extract!"
-
-# save sorted dictionary into file
-# generate .terms file with localized text onla to import it into TEXTStat
+#
+# Save sorted dictionary into file
+#
 def fun_save_combined(filename, intersection):
     global cb_open_txt
     global src_file
@@ -782,11 +777,7 @@ def fun_save_combined(filename, intersection):
     global SUFF_EXT_COMB
     global src_id_in_file
     global cb_in_file_folder
-##    global src_dir
-##    global dest_dir
 
-    # print filename
-    # print ext_dict.keys()
     fne = os.path.splitext(filename)[0]+SUFF_EXT_COMB
     if os.path.isfile(fne):
         os.remove(fne)
@@ -803,7 +794,6 @@ def fun_save_combined(filename, intersection):
         # write header for intersection
         fned.write('Src Dir' + OTFL_DLMTR + 'File' + OTFL_DLMTR + 'Ratio' + OTFL_DLMTR \
                     + 'SW ID' + OTFL_DLMTR + 'English' + OTFL_DLMTR + 'Russian'+ '\n')
-##        src_len = ''
         i = 1
         for list_element in ldict:
 ##            if src_len == '':
@@ -823,14 +813,13 @@ def fun_save_combined(filename, intersection):
                             + src_len + OTFL_DLMTR \
                             + str(list_element[0]) + OTFL_DLMTR + str(src_dict.get(list_element[0])) \
                             + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
-    # Close the file.
     fned.close()
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
 
-##
-## Browse for wbm_ref file
-##
+#
+# Browse for wbm_ref file
+#
 def app_browse_wr():
     global wr_file # src_file
     global wr_dir # src_dir
@@ -861,19 +850,16 @@ def app_browse_wr():
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
-##
-## Extract context from wbm_ref file
-##
+#
+# Extract context from wbm_ref file
+#
 def app_extract_wr():
     global wr_dict
     global wr_extr_file
 
     fname_wr = wr_file.get()
-##    fname_wr = "D:\Portable Python 2.7.5.1\__py_term_apps\wbm_ref.txt" # for testing
-
     if fname_wr != "":
         wr_dict = app_extract_wbm_ref(fname_wr)
-    ##    wr_dict = app_extract_wbm_ref(wr_dict.name)
         if len(wr_dict) > 0:
             fun_save_wr_extracted(fname_wr, wr_dict)
             if cb_open_txt.get() == 1:
@@ -890,7 +876,7 @@ class mdict(dict):
 
 
 # Extract wbm gui strings and context types from wbm_ref file
-# Could be used only for properties of products which generate wbm_ref file
+# Note: Can be used only for properties of products which generate wbm_ref file
 #    wbm_ref format
 #    Element consist from three main groups of items:
 #    ?E - 	items in Editor (View, Insert, Modify)
@@ -921,7 +907,6 @@ def app_extract_wbm_ref(filename):
     wr_types_all = ['BE', 'DF', 'DE', 'DA', 'FA', 'FE', 'FF', 'FG', 'RE', 'RF', \
                     'TE', 'VA', 'E', 'VE', 'VF', 'EG', 'XA', 'XF', 'CE', 'XE',  \
                     'EX', 'IA', 'IE', 'IF', 'bE', 'SW', 'UE', 'UF', 'UA']  # 29 types
-
     wr_types_all = ['BE', 'CE', 'E', 'EG', 'EX', 'FA', 'FE', 'FF', 'FG', 'IA',  \
                      'RE', 'RF', 'TE', 'UA', 'VA', 'VE', 'VF', 'XE', 'XF']
     wr_types_ignored = ['DE', 'DF', 'IF', 'IE', 'UE', 'UF', 'bE', 'rE ', 'rF',  \
@@ -990,34 +975,30 @@ def app_extract_wbm_ref(filename):
 ##        print 'm.*/c.* entries types:     ', tmc_dict.keys()
 ##        print "Types overview:\n ignored:", nmbs_ignored, "\n lines in file:", fdline
 ##                    "\n comments: ", nmbs_commnets, "\n undefined: ", nmbs_other
-
     except IOError, NameError:
         tkMessageBox.showerror('Error Opening File',
                                'Unable to open file: %r' % filename)
     return ext_dict
 
-
+#
+# Generate file from src or dest with context info from wbm_ref file
+#
 def fun_save_wr_extracted(filename, ext_dict):
-
     from collections import Counter
 
-    global SUFF_EXT_EXTRACT
+    global SUFF_EXT_EXTRACT_WITH_CTX # SUFF_EXT_EXTRACT
     global OTFL_DLMTR
     global wr_extr_file
     global wr_types_used
-
-    SUFF_EXT_EXTRACT = '_wr.extr'
 ##    OTFL_DLMTR = ';'
-
     wr_types_in_line = []
     wr_types_in_line2 = []
     wr_types_in_line = ['0' for x in range(len(wr_types_used))]
 ##    print wr_types_used
 ##    print wr_types_in_line
     list_elem1 = ''
-    # print filename
     # print ext_dict.keys()
-    fne = os.path.splitext(filename)[0]+SUFF_EXT_EXTRACT
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_EXTRACT_WITH_CTX
     if os.path.isfile(fne):
             os.remove(fne)
     ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
@@ -1056,39 +1037,9 @@ def fun_save_wr_extracted(filename, ext_dict):
     # Close the file.
     fned.close()
 
-
-# save dictionary into file
-# generate .terms file with localized text onla to import it into TEXTStat
-def fun_save_src_ctx_extracted(filename, ext_dict):
-    global SORT_DICT
-    global OTFL_DLMTR
-    SUFF_EXT_EXTRACT_WITH_CTX = '_with_ctx.extr'
-
-    # print filename
-    # print ext_dict.keys()
-    fne = os.path.splitext(filename)[0]+SUFF_EXT_EXTRACT_WITH_CTX
-    if os.path.isfile(fne):
-            os.remove(fne)
-    ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
-    if SORT_DICT:
-        ldict.sort(key=lambda x: x[0]) # sort by key
-    # write to files
-    fned = open(fne, 'w')
-    for list_element in ldict:
-        # check for the ctx
-        el_ctx = ext_dict.get(list_element[1], NOT_FOUND)
-        if el_ctx == NOT_FOUND:
-            # xxxx
-            list_element_ctx = OTFL_DLMTR + '-1'
-        else:
-            # xxxx
-            list_element_ctx = OTFL_DLMTR + '1'
-        fned.write(list_element[0] + OTFL_DLMTR + list_element[1] + list_element_ctx + '\n')
-    # Close the file.
-    fned.close()
-    if cb_open_txt.get() == 1:
-       os.system(USED_EDITOR + fne)
-
+#
+# Open src folder
+#
 def app_open_srcdir():
     global src_file
     global SUFF_EXT_COMB
@@ -1102,12 +1053,10 @@ def app_open_srcdir():
                                'Source file not selected. Browse for file and click again!')
     elif os.path.isfile(filename):
         (filepath, filename) = os.path.split(filename)
-        print 'filepath ', filepath
         os.startfile(filepath)
     else:
         tkMessageBox.showerror('Error Opening Src Directory',
                                'Source file: %r. Browse for file again!' % filename)
-
 ##    fne = os.path.splitext(filename)[0]+SUFF_EXT_CMP
 ##    if os.path.isfile(fne):
 ##        os.system(USED_EDITOR + fne)
@@ -1116,16 +1065,18 @@ def app_open_srcdir():
 ##    if os.path.isfile(fne):
 ##        os.system(USED_EDITOR + fne)
 
+#
+# Open web page to convert content from UTF8 to suitable codepage to paste it into Excel
+#
 def app_open_web_utf8convertert():
     url = 'http://itpro.cz/juniconv/'
-    ##  additonal useful  url  http://2cyr.com/decode/?lang=en
+    url2 = 'http://2cyr.com/decode/?lang=en' # additonal useful
     webbrowser.open_new_tab(url)
     tkMessageBox.showinfo('Hint',
                        'Copy-Paste content to Input field, select Direction "Java entities >> UTF-8 text" and click Convert!')
 
 def app_close():
     global root
-##    print "app_close()"
     root.destroy()
 
 def main():
@@ -1137,5 +1088,4 @@ def main():
     root.mainloop()
 
 if __name__ == '__main__':
-
     main()
