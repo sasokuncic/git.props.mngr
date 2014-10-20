@@ -7,7 +7,7 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  03.02.2014
+##  Created:  04.02.2014
 ##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
 ##               error - tooltip contains more ';', see more columns in xlsx file
 #-------------------------------------------------------------------------------
@@ -43,6 +43,7 @@ PRP_TYP_XML = 2
 PRP_TYP_ASP = 3
 
 OTFL_DLMTR = ";"
+OTFL_DLMTR_RPLC = ','
 EMPTY_ENTRY = 'xxx'
 
 # define options for opening a file
@@ -411,8 +412,8 @@ def fun_save_extracted(filename, pext_dict, pwp_dict):
     # write to files
     fned = open(fne, 'w')
     if wp_dict_len:
-        fned.write('SW-ID' + OTFL_DLMTR + 'SRC-GUI-TXT' + OTFL_DLMTR + 'TypesSum' + OTFL_DLMTR \
-                    + OTFL_DLMTR + OTFL_DLMTR.join(wr_types_used) + '\n')
+        fned.write('SW-ID' + OTFL_DLMTR + 'SRC-GUI-TXT' + OTFL_DLMTR + 'TypesSum' \
+                    + OTFL_DLMTR + OTFL_DLMTR + OTFL_DLMTR.join(wr_types_used) + '\n')
     ln = 1
     fntd = open(fnt, 'w')
     for list_element in ldict:
@@ -432,8 +433,10 @@ def fun_save_extracted(filename, pext_dict, pwp_dict):
 ##                list_element_ctx = OTFL_DLMTR + OTFL_DLMTR.join(el_ctx)
                 # for filtering in Excel
                 list_element_ctx = excel_str + OTFL_DLMTR.join(wr_types_in_line2)
-
-        fned.write(list_element[0] + OTFL_DLMTR + list_element[1] + list_element_ctx + '\n')
+        # because Excel import replace OTFL_DLMTR with OTFL_DLMTR_RPLC
+        fned.write(list_element[0] + OTFL_DLMTR \
+                    + list_element[1].replace(OTFL_DLMTR, OTFL_DLMTR_RPLC) \
+                    + list_element_ctx + '\n')
 ##        fntd.write(list_element[1] + '\n')
     # Close the file.
     fned.close()
@@ -641,13 +644,14 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
             fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
 
     fned.write('######### Empty items report #########\n')
-    # Empty items in src and dest_dict
-    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==EMPTY_ENTRY) and (dest_dict.get(item)==EMPTY_ENTRY)])
+
+    # Empty items in src_dict
+    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==EMPTY_ENTRY) and (dest_dict.get(item)!=EMPTY_ENTRY)])
     if len(emptysrc) > 0:
         ldict = [x for x in emptysrc.iteritems()] # convert dictionary to the list
         if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
-        fned.write('### Empty items in src and dest file' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
+        fned.write('### Empty items in src file only' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
@@ -667,13 +671,13 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
                 filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
             fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
 
-    # Empty items in src_dict
-    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==EMPTY_ENTRY) and (dest_dict.get(item)!=EMPTY_ENTRY)])
+    # Empty items in src and dest_dict
+    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==EMPTY_ENTRY) and (dest_dict.get(item)==EMPTY_ENTRY)])
     if len(emptysrc) > 0:
         ldict = [x for x in emptysrc.iteritems()] # convert dictionary to the list
         if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
-        fned.write('### Empty items in src file only' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
+        fned.write('### Empty items in src and dest file' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
@@ -684,7 +688,7 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
     semicolumns_dest = dict([(item,dest_dict[item]) for item in dest_dict.keys() if (dest_dict.get(item).find(OTFL_DLMTR)!=-1)])
 
     if len(semicolumns_src) or len(semicolumns_dest):
-        fned.write('######### Semicolumns found and replaced by comma <,> #########\n')
+        fned.write('######### Semicolumns (OTFL_DLMTR) found and replaced by comma (OTFL_DLMTR_RPLC) #########\n')
 
         fned.write('### Semicolumns in src file items: ' + OTFL_DLMTR + str(len(semicolumns_src)) + '\n')
         ldict = [x for x in semicolumns_src.iteritems()] # convert dictionary to the list
@@ -693,8 +697,8 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
             if cb_in_file_folder.get():
                 filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
             fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(src_dict.get(list_element[0])) + '\n')
-##            list_element[1] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, ',')
-            src_dict[list_element[0]] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, ',')
+##            list_element[1] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, OTFL_DLMTR_RPLC)
+            src_dict[list_element[0]] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, OTFL_DLMTR_RPLC)
 
         fned.write('### Semicolumns in dest file items: ' + OTFL_DLMTR + str(len(semicolumns_dest)) + '\n')
         ldict = [x for x in semicolumns_dest.iteritems()] # convert dictionary to the list
@@ -703,7 +707,7 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
             if cb_in_file_folder.get():
                 filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
             fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
-            dest_dict[list_element[0]] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, ',')
+            dest_dict[list_element[0]] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, OTFL_DLMTR_RPLC)
 
     # Close the file.
     fned.close()
@@ -940,7 +944,7 @@ def app_extract_wbm_ref(filename):
 ##        print 'wr_entry_stat: ', wr_entry_stat
 ##        wr_types_stat = {k: v for k, v in zip(wr_types, wr_types_cntrs)}
 ##        print 'wr_types_stat: ', wr_types_stat
-##        wr_types_used.sort()
+        wr_types_used.sort()
 ##        print 'wr_types_used: ', wr_types_used
 ##        print 'Number of m.*/c.* entries: ', tmc
 ##        print 'm.*/c.* entries types:     ', tmc_dict.keys()
