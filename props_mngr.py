@@ -7,7 +7,7 @@
 ##  = to combine src and dest files or directories with files into single with intersedted entries
 ##
 ##  Author:   S.Kuncic
-##  Created:  02.02.2014
+##  Created:  03.02.2014
 ##   xml tested, ok, ru xml must be in utf8 (convert it before you use it)
 ##               error - tooltip contains more ';', see more columns in xlsx file
 #-------------------------------------------------------------------------------
@@ -22,22 +22,28 @@ from os.path import isfile, join
 import subprocess
 import xml.etree.ElementTree as ET
 
-dict_sort = False
-const_editor = "D:\Usr\Install\Notepad2\Notepad2.exe "
-##const_editor = "Notepad.exe "
-##const_editor = "D:\Programs\Notepad2\Notepad2.exe " # IT
-ext_extract = ".extr"
-ext_delimiter = ";"
-ext_terms = ".terms"
-ext_cmp = ".cmp"
-ext_comb = ".comb"
-ext_props = ".properties"
-props_delimiter = "."
+USED_EDITOR = "D:\Usr\Install\Notepad2\Notepad2.exe "
+##USED_EDITOR = "Notepad.exe "
+##USED_EDITOR = "D:\Programs\Notepad2\Notepad2.exe " # IT
 
-extr_id_delimiter = "="
-extr_comments_delimiter = "#"
-extr_filename_delimiter = "*"
-entry_empty = 'xxx'
+SORT_DICT = False
+SUFF_EXT_EXTRACT = ".extr"
+SUFF_EXT_TERMS = ".terms"
+SUFF_EXT_CMP = ".cmp"
+SUFF_EXT_COMB = ".comb"
+SUFF_EXT_PROPS = ".properties"
+
+PROPS_SUB_DLMTR = "."
+PROPS_ID_DLMTR = "="
+PROPS_COMM_1ST_CHR = "#"
+PROPS_FLNM_1ST_CHR = "*"
+
+PRP_TYP_PROPERTIES = 1
+PRP_TYP_XML = 2
+PRP_TYP_ASP = 3
+
+OTFL_DLMTR = ";"
+EMPTY_ENTRY = 'xxx'
 
 # define options for opening a file
 options = {}
@@ -48,12 +54,16 @@ options['title'] = 'Select properties file (select Props type checkbuttons also)
 
 src_dict = {}
 src_id_in_file = {}
-dest_dict = {}
-src_dir = ""
-dest_dir = ""
 src_extension = ""
+src_dir = ""
+
+dest_dict = {}
+dest_dir = ""
+
+wp_dict = {}
 wr_extr_file = ""
 
+# GUI
 def main_gui(root):
     global rb_props_type
     global src_file
@@ -63,15 +73,18 @@ def main_gui(root):
     global cb_open_txt
     global cb_extr_to_file
     global cb_in_file_folder
+##    global PRP_TYP_PROPERTIES
+##    global PRP_TYP_XML
+##    global PRP_TYP_ASP
 
     f = Frame(root, width=600, height=400)
 
     rf = LabelFrame(f, relief=GROOVE, bd=2, text = "Props type")
     # Label(rf, text="Props type", width=18, height=2, anchor = W).pack(side=LEFT)
     rb_props_type = IntVar()
-    for text, value in [('properties', 1), ('xml', 2), ('asp', 3)]:
+    for text, value in [('properties', PRP_TYP_PROPERTIES), ('xml', PRP_TYP_XML), ('asp', PRP_TYP_ASP)]:
         Radiobutton(rf, text=text, value=value, variable=rb_props_type).pack(side=LEFT, padx=10)
-    rb_props_type.set(1)
+    rb_props_type.set(PRP_TYP_PROPERTIES)
     rf.pack(fill = BOTH, padx=10, pady=0)
 
     # Checkbuttons frame
@@ -95,7 +108,7 @@ def main_gui(root):
 
     # Label All in File folder, checkbox
     cb_in_file_folder = IntVar()
-    cb_in_file_folder.set(1)
+    cb_in_file_folder.set(0)
     Checkbutton(cf, text = "All in files in folder", variable = cb_in_file_folder, \
                      onvalue = 1, offvalue = 0, height=1).pack(side=LEFT, padx=5)
     cf.pack(fill = BOTH, padx=10, pady=0)
@@ -140,8 +153,10 @@ def main_gui(root):
 
     f.pack()
 
+# Browse for source file
+# or if cb_in_file_folder selected for all files in the current directory
+#                                  with the same suffix as selected file
 def app_browse_src():
-    # http://tkinter.unpythonic.net/wiki/tkFileDialog
     global root
     global src_file
     global src_dir
@@ -151,19 +166,18 @@ def app_browse_src():
     global cb_in_file_folder
     global src_id_in_file
 
+    # For details see http://tkinter.unpythonic.net/wiki/tkFileDialog
     sel_file = tkFileDialog.askopenfile(mode='r', **options)
-    #print sel_file.name
     if not sel_file:
         # Cancel button selected
+        src_file.set('')
         return
     try:
-        # set src file name
         src_file.set(sel_file.name)
-        # set src dirname
         (filepath, filename) = os.path.split(sel_file.name)
         (shortname, src_extension) = os.path.splitext(filename)
         (parent_path, src_dir) = os.path.split(filepath)
-        if rb_props_type.get() == 1 and cb_in_file_folder.get():
+        if rb_props_type.get() == PRP_TYP_PROPERTIES and cb_in_file_folder.get():
 ##            print 'properties, all files in directory'
             src_id_in_file.clear()
             # combine all files with the src_extension into single file
@@ -188,12 +202,12 @@ def app_browse_src():
             fned.close()
             src_file.set(fne)
 
-        elif rb_props_type.get() == 1 and cb_in_file_folder.get() == 0:
+        elif rb_props_type.get() == PRP_TYP_PROPERTIES and cb_in_file_folder.get() == 0:
 ##            print 'properties, single file'
             fd = open(sel_file.name) # check selected file
             fd.close()
 
-        elif rb_props_type.get() == 2:
+        elif rb_props_type.get() == PRP_TYP_XML:
             print 'xml, single file. cb_in_file_folder ignored'
             # create src/dest .properties file
             # update src_/dest_file, leave rb as is
@@ -207,7 +221,7 @@ def app_browse_src():
                 fnnew = extr_xml_aa(xmlroot, sel_file.name)
             src_file.set(fnnew)
 
-        elif rb_props_type.get() == 3:
+        elif rb_props_type.get() == PRP_TYP_ASP:
             print 'asp, single file. cb_in_file_folder ignored'
             # create more language depandent .properties files *_en/_ru/_sl
             # update src_file *_en, change rb to 1, info to
@@ -232,11 +246,11 @@ def escape_html(data):
     return data2
 
 def extr_xml_mp(root, filename):
-    global ext_props
-    global extr_id_delimiter
-    global props_delimiter
+    global SUFF_EXT_PROPS
+    global PROPS_ID_DLMTR
+    global PROPS_SUB_DLMTR
 
-    fne = os.path.splitext(filename)[0]+ext_props
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_PROPS
     if os.path.isfile(fne):
         os.remove(fne)
     fned = open(fne, 'w')
@@ -252,19 +266,19 @@ def extr_xml_mp(root, filename):
                 elemstr = elemstr[loc+len('<Content>'):loc2]
 ##            print '   MSG - keys ', elem.keys()
 ##            print '   ID:       ', parent.attrib.get('Name').lower(), '.' , elem.attrib.get('Id').lower(), '.', elem.attrib.get('Name').lower(), '\n   TEXT:     ', elemstr
-            fned.write(parent.attrib.get('Name') + props_delimiter \
-                        + elem.attrib.get('Id') + props_delimiter \
-                        + elem.attrib.get('Name') + extr_id_delimiter + str(elemstr) + '\n')
+            fned.write(parent.attrib.get('Name') + PROPS_SUB_DLMTR \
+                        + elem.attrib.get('Id') + PROPS_SUB_DLMTR \
+                        + elem.attrib.get('Name') + PROPS_ID_DLMTR + str(elemstr) + '\n')
     # Close the file.
     fned.close()
     return fne
 
 def extr_xml_aa(root, filename):
-    global ext_props
-    global extr_id_delimiter
-    global props_delimiter
+    global SUFF_EXT_PROPS
+    global PROPS_ID_DLMTR
+    global PROPS_SUB_DLMTR
 
-    fne = os.path.splitext(filename)[0]+ext_props
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_PROPS
     if os.path.isfile(fne):
         os.remove(fne)
     fned = open(fne, 'w')
@@ -273,7 +287,7 @@ def extr_xml_aa(root, filename):
         for elem in parent.iterfind('phrase'):
             for child in elem.getchildren():
 ##                print '   ID:       ', elem.attrib.get('key'), '\n   TEXT:     ', child.text
-                fned.write(elem.attrib.get('key') + extr_id_delimiter \
+                fned.write(elem.attrib.get('key') + PROPS_ID_DLMTR \
                             + child.text + '\n')
     # Close the file.
     fned.close()
@@ -284,6 +298,7 @@ def app_extract_src():
     global src_file
     global src_dict
     global src_dir
+    global wr_dict
     global cb_extr_to_file
     global cb_in_file_folder
 
@@ -300,13 +315,13 @@ def app_extract_src():
     src_dict = fun_extract(fn)
     if cb_extr_to_file.get():
         # save to .term and .extr file
-        fun_save_extracted(fn, src_dict)
+        fun_save_extracted(fn, src_dict, wr_dict)
 
 def fun_extract(filename):
-    global extr_id_delimiter
-    global extr_comments_delimiter
-    global entry_empty
-    global extr_filename_delimiter
+    global PROPS_ID_DLMTR
+    global PROPS_COMM_1ST_CHR
+    global EMPTY_ENTRY
+    global PROPS_FLNM_1ST_CHR
     global src_id_in_file
 
     try:
@@ -324,18 +339,18 @@ def fun_extract(filename):
         for src_line in fd:
             nmb += 1
             src_line = src_line.rstrip('\n')
-            if src_line.startswith(extr_comments_delimiter):
+            if src_line.startswith(PROPS_COMM_1ST_CHR):
                 nmbs_commnets += 1
-            elif src_line.startswith(extr_filename_delimiter):
-                src_entry=src_line.split(extr_id_delimiter) # split, 3 items
+            elif src_line.startswith(PROPS_FLNM_1ST_CHR):
+                src_entry=src_line.split(PROPS_ID_DLMTR) # split, 3 items
                 (filepath, src_entry_file) = os.path.split(src_entry [1])
                 nmb_file_names += 1
                 print "fun_extract(): src_entry_file=%s!" % src_entry_file
             elif src_line.find("=") > 0:
-                src_entry=src_line.split(extr_id_delimiter, 1) # split using only the first delimiter !
+                src_entry=src_line.split(PROPS_ID_DLMTR, 1) # split using only the first delimiter !
                 if len(src_entry) == 2:
                     if src_entry[1] == '':
-                        src_entry[1] = entry_empty
+                        src_entry[1] = EMPTY_ENTRY
                         nmb_src_enties1w += 1
                     else:
                         nmb_src_enties2w += 1
@@ -345,7 +360,7 @@ def fun_extract(filename):
                         src_id_in_file[src_entry[0]] = src_entry_file
                     # print "===       src_entry[0]: ", src_entry[0], "src_entry[1]: ", src_entry[1]
                 elif len(src_entry) == 1:
-                    ext_dict [src_entry[0]] = entry_empty # .encode('utf_8')
+                    ext_dict [src_entry[0]] = EMPTY_ENTRY # .encode('utf_8')
                     nmb_src_enties1w += 1
                 else:
                     tkMessageBox.showwarning('Ectract: warning',
@@ -367,36 +382,64 @@ def fun_extract(filename):
 
 # save dictionary into file
 # generate .terms file with localized text onla to import it into TEXTStat
-def fun_save_extracted(filename, ext_dict):
-    global dict_sort
-    global ext_extract
-    global ext_delimiter
-    global ext_terms
-    global ext_cmp
-    global ext_comb
+def fun_save_extracted(filename, pext_dict, pwp_dict):
+    global SORT_DICT
+    global SUFF_EXT_EXTRACT
+    global OTFL_DLMTR
+    global SUFF_EXT_TERMS
+    global SUFF_EXT_CMP
+    global SUFF_EXT_COMB
+    global wr_types_used
+    NOT_FOUND = 'xxx'
 
     # print filename
-    # print ext_dict.keys()
-    fne = os.path.splitext(filename)[0]+ext_extract
+    # print pext_dict.keys()
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_EXTRACT
     if os.path.isfile(fne):
             os.remove(fne)
-    fnt = os.path.splitext(filename)[0]+ext_terms
+    fnt = os.path.splitext(filename)[0]+SUFF_EXT_TERMS
     if os.path.isfile(fnt):
             os.remove(fnt)
-    ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
-    if dict_sort:
+    wp_dict_len = len(pwp_dict)
+    wr_types_in_line = []
+    wr_types_in_line2 = []
+    wr_types_in_line = ['0' for x in range(len(wr_types_used))]
+
+    ldict = [x for x in pext_dict.iteritems()] # convert dictionary to the list
+    if SORT_DICT:
         ldict.sort(key=lambda x: x[0]) # sort by key
     # write to files
     fned = open(fne, 'w')
+    if wp_dict_len:
+        fned.write('SW-ID' + OTFL_DLMTR + 'SRC-GUI-TXT' + OTFL_DLMTR + 'TypesSum' + OTFL_DLMTR \
+                    + OTFL_DLMTR + OTFL_DLMTR.join(wr_types_used) + '\n')
+    ln = 1
     fntd = open(fnt, 'w')
     for list_element in ldict:
-        fned.write(list_element[0] + ext_delimiter + list_element[1] + '\n')
-        fntd.write(list_element[1] + '\n')
+        list_element_ctx = ''
+        if wp_dict_len:
+            el_ctx = pwp_dict.get(list_element[1], NOT_FOUND)
+            ln += 1
+            excel_str = OTFL_DLMTR + '=SUM(D' + str(ln) + ':AH' + str(ln) + ')' + OTFL_DLMTR
+            if el_ctx == NOT_FOUND:
+                list_element_ctx = excel_str + '-1'
+            else:
+                wr_types_in_line2 = list(wr_types_in_line)
+                for elm in el_ctx:
+                    i = wr_types_used.index(elm)
+                    wr_types_in_line2[i] = '1'
+                # simple txt extension for simple review in txt editor
+##                list_element_ctx = OTFL_DLMTR + OTFL_DLMTR.join(el_ctx)
+                # for filtering in Excel
+                list_element_ctx = excel_str + OTFL_DLMTR.join(wr_types_in_line2)
+
+        fned.write(list_element[0] + OTFL_DLMTR + list_element[1] + list_element_ctx + '\n')
+##        fntd.write(list_element[1] + '\n')
     # Close the file.
     fned.close()
     fntd.close()
     if cb_open_txt.get() == 1:
-       os.system(const_editor + fne)
+       os.system(USED_EDITOR + fne)
 
 def app_browse_dest():
     # http://tkinter.unpythonic.net/wiki/tkFileDialog
@@ -420,7 +463,7 @@ def app_browse_dest():
         (shortname, dest_extension) = os.path.splitext(filename)
         (parent_path, dest_dir) = os.path.split(filepath)
 
-        if rb_props_type.get() == 1 and cb_in_file_folder.get():
+        if rb_props_type.get() == PRP_TYP_PROPERTIES and cb_in_file_folder.get():
 ##          print 'properties, all files in directory'
             if src_extension != dest_extension and src_extension != '' and dest_extension != '':
                 tkMessageBox.showinfo('Info Opening Dest File', \
@@ -455,12 +498,12 @@ def app_browse_dest():
             # set file list as selected file
             fned.close()
             dest_file.set(fne)
-        elif rb_props_type.get() == 1 and cb_in_file_folder.get() == 0:
+        elif rb_props_type.get() == PRP_TYP_PROPERTIES and cb_in_file_folder.get() == 0:
 ##            print 'properties, single file'
             fd = open(dest_file.get()) # check selected file
             fd.close()
 
-        elif rb_props_type.get() == 2:
+        elif rb_props_type.get() == PRP_TYP_XML:
             print 'xml, single file. cb_in_file_folder ignored'
             # create dest .properties file
             # update dest_file, leave rb as is
@@ -474,7 +517,7 @@ def app_browse_dest():
                 fnnew = extr_xml_aa(xmlroot, sel_file.name)
             dest_file.set(fnnew)
 
-        elif rb_props_type.get() == 3:
+        elif rb_props_type.get() == PRP_TYP_ASP:
             print 'asp, single file. cb_in_file_folder ignored'
             # create more language depandent .properties files *_en/_ru/_sl
             # update src_file *_en, change rb to 1, info to
@@ -494,6 +537,7 @@ def app_extract_dest():
     global dest_dict
     global dest_dir
     global cb_extr_to_file
+    global wr_dict
 
     # debug xxx
 ##    fname_small = "D:\Portable Python 2.7.5.1\__py_term_apps\messages_ru_id-as-str_small.properties"
@@ -506,7 +550,7 @@ def app_extract_dest():
     dest_dict = fun_extract(fn)
 # save to .term and .extr file
     if cb_extr_to_file.get():
-        fun_save_extracted(fn, dest_dict)
+        fun_save_extracted(fn, dest_dict, wr_dict)
 
 def app_compare():
     global root
@@ -555,16 +599,16 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
     global dest_file
     global src_dict
     global dest_dict
-    global dict_sort
-    global ext_delimiter
-    global ext_cmp
-    global entry_empty
+    global SORT_DICT
+    global OTFL_DLMTR
+    global SUFF_EXT_CMP
+    global EMPTY_ENTRY
     global cb_in_file_folder
     global src_id_in_file
 
     # print filename
     # print ext_dict.keys()
-    fne = os.path.splitext(filename)[0]+ext_cmp
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_CMP
     if os.path.isfile(fne):
             os.remove(fne)
 
@@ -572,99 +616,99 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
     filename1 = ''
     if len(notin_dest) > 0:
         ldict = [x for x in notin_dest.iteritems()] # convert dictionary to the list
-        if dict_sort:
+        if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
         # write header for notin_dest
-        fned.write('######### Src File' + ext_delimiter + src_file.get() + '\n')
-        fned.write('### Keys in src but not in dest' + ext_delimiter + str(len(notin_dest)) + '\n')
+        fned.write('######### Src File' + OTFL_DLMTR + src_file.get() + '\n')
+        fned.write('### Keys in src but not in dest' + OTFL_DLMTR + str(len(notin_dest)) + '\n')
 
         for list_element in ldict:
             if cb_in_file_folder.get():
-                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
-            fned.write(filename1 + list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) + '\n')
+                filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
+            fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(src_dict.get(list_element[0])) + '\n')
 
     if len(notin_src) > 0:
         ldict = [x for x in notin_src.iteritems()] # convert dictionary to the list
-        if dict_sort:
+        if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
         # write header for notin_src
-        fned.write('######### Dest File' + ext_delimiter + dest_file.get() + '\n')
-        fned.write('### Keys in dest but not in src' + ext_delimiter + str(len(notin_src)) + '\n')
+        fned.write('######### Dest File' + OTFL_DLMTR + dest_file.get() + '\n')
+        fned.write('### Keys in dest but not in src' + OTFL_DLMTR + str(len(notin_src)) + '\n')
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
-                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
-            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+                filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
+            fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
 
     fned.write('######### Empty items report #########\n')
     # Empty items in src and dest_dict
-    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==entry_empty) and (dest_dict.get(item)==entry_empty)])
+    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==EMPTY_ENTRY) and (dest_dict.get(item)==EMPTY_ENTRY)])
     if len(emptysrc) > 0:
         ldict = [x for x in emptysrc.iteritems()] # convert dictionary to the list
-        if dict_sort:
+        if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
-        fned.write('### Empty items in src and dest file' + ext_delimiter + str(len(emptysrc)) + '\n')
+        fned.write('### Empty items in src and dest file' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
-                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
-            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+                filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
+            fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
 
     # Empty items in dest_dict only
-    emptysrc = dict([(item,dest_dict[item]) for item in dest_dict.keys() if (src_dict.get(item)!=entry_empty) and (dest_dict.get(item)==entry_empty)])
+    emptysrc = dict([(item,dest_dict[item]) for item in dest_dict.keys() if (src_dict.get(item)!=EMPTY_ENTRY) and (dest_dict.get(item)==EMPTY_ENTRY)])
     if len(emptysrc) > 0:
         ldict = [x for x in emptysrc.iteritems()] # convert dictionary to the list
-        if dict_sort:
+        if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
-        fned.write('### Empty items in dest file only' + ext_delimiter + str(len(emptysrc)) + '\n')
+        fned.write('### Empty items in dest file only' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
-                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
-            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+                filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
+            fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
 
     # Empty items in src_dict
-    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==entry_empty) and (dest_dict.get(item)!=entry_empty)])
+    emptysrc = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item)==EMPTY_ENTRY) and (dest_dict.get(item)!=EMPTY_ENTRY)])
     if len(emptysrc) > 0:
         ldict = [x for x in emptysrc.iteritems()] # convert dictionary to the list
-        if dict_sort:
+        if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
-        fned.write('### Empty items in src file only' + ext_delimiter + str(len(emptysrc)) + '\n')
+        fned.write('### Empty items in src file only' + OTFL_DLMTR + str(len(emptysrc)) + '\n')
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
-                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
-            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+                filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
+            fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
 
-    semicolumns_src = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item).find(ext_delimiter)!=-1)])
-    semicolumns_dest = dict([(item,dest_dict[item]) for item in dest_dict.keys() if (dest_dict.get(item).find(ext_delimiter)!=-1)])
+    semicolumns_src = dict([(item,src_dict[item]) for item in src_dict.keys() if (src_dict.get(item).find(OTFL_DLMTR)!=-1)])
+    semicolumns_dest = dict([(item,dest_dict[item]) for item in dest_dict.keys() if (dest_dict.get(item).find(OTFL_DLMTR)!=-1)])
 
     if len(semicolumns_src) or len(semicolumns_dest):
         fned.write('######### Semicolumns found and replaced by comma <,> #########\n')
 
-        fned.write('### Semicolumns in src file items: ' + ext_delimiter + str(len(semicolumns_src)) + '\n')
+        fned.write('### Semicolumns in src file items: ' + OTFL_DLMTR + str(len(semicolumns_src)) + '\n')
         ldict = [x for x in semicolumns_src.iteritems()] # convert dictionary to the list
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
-                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
-            fned.write(filename1 + list_element[0] + ext_delimiter + str(src_dict.get(list_element[0])) + '\n')
-##            list_element[1] = src_dict.get(list_element[0]).replace(ext_delimiter, ',')
-            src_dict[list_element[0]] = src_dict.get(list_element[0]).replace(ext_delimiter, ',')
+                filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
+            fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(src_dict.get(list_element[0])) + '\n')
+##            list_element[1] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, ',')
+            src_dict[list_element[0]] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, ',')
 
-        fned.write('### Semicolumns in dest file items: ' + ext_delimiter + str(len(semicolumns_dest)) + '\n')
+        fned.write('### Semicolumns in dest file items: ' + OTFL_DLMTR + str(len(semicolumns_dest)) + '\n')
         ldict = [x for x in semicolumns_dest.iteritems()] # convert dictionary to the list
         ## xxx
         for list_element in ldict:
             if cb_in_file_folder.get():
-                filename1 = str(src_id_in_file.get(list_element[0])) + ext_delimiter
-            fned.write(filename1 + list_element[0] + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
-            dest_dict[list_element[0]] = src_dict.get(list_element[0]).replace(ext_delimiter, ',')
+                filename1 = str(src_id_in_file.get(list_element[0])) + OTFL_DLMTR
+            fned.write(filename1 + list_element[0] + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
+            dest_dict[list_element[0]] = src_dict.get(list_element[0]).replace(OTFL_DLMTR, ',')
 
     # Close the file.
     fned.close()
     if cb_open_txt.get() == 1:
-       os.system(const_editor + fne)
+       os.system(USED_EDITOR + fne)
 
 def app_combine():
     global root
@@ -696,9 +740,9 @@ def fun_save_combined(filename, intersection):
     global dest_file
     global src_dict
     global dest_dict
-    global dict_sort
-    global ext_delimiter
-    global ext_comb
+    global SORT_DICT
+    global OTFL_DLMTR
+    global SUFF_EXT_COMB
     global src_id_in_file
     global cb_in_file_folder
 ##    global src_dir
@@ -706,7 +750,7 @@ def fun_save_combined(filename, intersection):
 
     # print filename
     # print ext_dict.keys()
-    fne = os.path.splitext(filename)[0]+ext_comb
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_COMB
     if os.path.isfile(fne):
         os.remove(fne)
     (filepath, filename1) = os.path.split(filename) # name of the original file
@@ -717,11 +761,11 @@ def fun_save_combined(filename, intersection):
 
     if len(intersection) > 0:
         ldict = [x for x in intersection.iteritems()] # convert dictionary to the list
-        if dict_sort:
+        if SORT_DICT:
             ldict.sort(key=lambda x: x[0]) # sort by key
         # write header for intersection
-        fned.write('Src Dir' + ext_delimiter + 'File' + ext_delimiter + 'Ratio' + ext_delimiter \
-                    + 'SW ID' + ext_delimiter + 'English' + ext_delimiter + 'Russian'+ '\n')
+        fned.write('Src Dir' + OTFL_DLMTR + 'File' + OTFL_DLMTR + 'Ratio' + OTFL_DLMTR \
+                    + 'SW ID' + OTFL_DLMTR + 'English' + OTFL_DLMTR + 'Russian'+ '\n')
 ##        src_len = ''
         i = 1
         for list_element in ldict:
@@ -738,10 +782,10 @@ def fun_save_combined(filename, intersection):
             src_len = "=(LEN(F%(s)s)-LEN(E%(s)s))/LEN(E%(s)s)" % {'s': str(i)} ##  Excel ratio formula
             if cb_in_file_folder.get():
                 filename1 = str(src_id_in_file.get(list_element[0]))
-            fned.write(dirname + ext_delimiter + filename1 + ext_delimiter \
-                            + src_len + ext_delimiter \
-                            + str(list_element[0]) + ext_delimiter + str(src_dict.get(list_element[0])) \
-                            + ext_delimiter + str(dest_dict.get(list_element[0])) + '\n')
+            fned.write(dirname + OTFL_DLMTR + filename1 + OTFL_DLMTR \
+                            + src_len + OTFL_DLMTR \
+                            + str(list_element[0]) + OTFL_DLMTR + str(src_dict.get(list_element[0])) \
+                            + OTFL_DLMTR + str(dest_dict.get(list_element[0])) + '\n')
     # Close the file.
     fned.close()
 
@@ -777,52 +821,23 @@ def app_browse_wr():
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
 
-''' wbm_ref
-Element consist from three main groups of items:
-?E - 	items in Editor (View, Insert, Modify)
-?F - 	items in Finder (Spreadsheet)
-?A - 	other items - Attributes from database IGNORE
-Note	"?" means any character.
-Each main group contains several items:
-F? = 	Field in Editor/Finder/other Attribute
-R? = 	Relation in Editor/Finder
-D? = 	Domain Name in Editor/Finder/other Attribute - IGNORE
-V? = 	Value in Editor/Finder/other Attribute - second field (IGNORE others)
-I? = 	Interval in Editor/Finder/other Attribute - IGNORE
-U? =    ???? - IGNORE
-Editor represents a window which is opened when the View, Insert or Modify button is clicked.
-Finder represents a Element's spreadsheet.
-Other items in Editor:
-TE = 	Tab
-BE = 	Border Name (start)
-bE = 	Border Name (end) - IGNORE
-RE = 	Radio button (start)
-rE = 	Radio button (end) - IGNORE
-CE = 	Check box Name
-or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
-'''
-
 def app_extract_wr():
     global wr_dict
     global wr_extr_file
 
     fname_wr = wr_file.get()
-    fname_wr = "D:\Portable Python 2.7.5.1\__py_term_apps\wbm_ref.txt" # for testing
+##    fname_wr = "D:\Portable Python 2.7.5.1\__py_term_apps\wbm_ref.txt" # for testing
 
     if fname_wr != "":
         wr_dict = app_extract_wbm_ref(fname_wr)
     ##    wr_dict = app_extract_wbm_ref(wr_dict.name)
-
-        if len(wr_dict) > 0 and src_file.get() == '':
+        if len(wr_dict) > 0:
             fun_save_wr_extracted(fname_wr, wr_dict)
             if cb_open_txt.get() == 1:
-                os.system(const_editor + wr_extr_file)
-        elif len(src_dict) > 0 and len(wr_dict) > 0:
-            print "src_file.get() not empty - add context to _ctx.extr"
-            fun_save_src_ctx_extracted(src_file.get(), src_dict)
-        elif src_file.get() != '' and len(wr_dict) > 0:
-            tkMessageBox.showinfo('Attach context to Source file', \
-                    "Extract Source file and click ExtrCtx again!")
+                os.system(USED_EDITOR + wr_extr_file)
+    else:
+        tkMessageBox.showinfo('Extract context from wbm_ref.txt ', \
+                "Select wbm_ref.txt file and click ExtrCtx again!")
 
 # multiple values for one key,
 class mdict(dict):
@@ -831,19 +846,46 @@ class mdict(dict):
         self.setdefault(key, []).append(value)
 
 
+# Extract wbm gui strings and context types from wbm_ref file
+# Could be used only for properties of products which generate wbm_ref file
+#    wbm_ref format
+#    Element consist from three main groups of items:
+#    ?E - 	items in Editor (View, Insert, Modify)
+#    ?F - 	items in Finder (Spreadsheet)
+#    ?A - 	other items - Attributes from database IGNORE
+#    Note	"?" means any character.
+#    Each main group contains several items:
+#    F? = 	Field in Editor/Finder/other Attribute
+#    R? = 	Relation in Editor/Finder
+#    D? = 	Domain Name in Editor/Finder/other Attribute - IGNORE
+#    V? = 	Value in Editor/Finder/other Attribute - second field (IGNORE others)
+#    I? = 	Interval in Editor/Finder/other Attribute - IGNORE
+#    U? =    ???? - IGNORE
+#    Editor represents a window which is opened when the View, Insert or Modify button is clicked.
+#    Finder represents a Element's spreadsheet.
+#    Other items in Editor:
+#    TE = 	Tab
+#    BE = 	Border Name (start)
+#    bE = 	Border Name (end) - IGNORE
+#    RE = 	Radio button (start)
+#    rE = 	Radio button (end) - IGNORE
+#    CE = 	Check box Name
+#    or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
 def app_extract_wbm_ref(filename):
     global wr_types_used
     wr_types_all = ['BE', 'DF', 'DE', 'DA', 'FA', 'FE', 'FF', 'FG', 'RE', 'RF', \
-                    'TE', 'VA', 'E', 'VE', 'VF', 'EG', 'XA', 'XF', 'CE', 'XE', 'EX', \
-                    'IA', 'IE', 'IF', 'bE', 'SW', 'UE', 'UF', 'UA'] # 29 types
+                    'TE', 'VA', 'E', 'VE', 'VF', 'EG', 'XA', 'XF', 'CE', 'XE',  \
+                    'EX', 'IA', 'IE', 'IF', 'bE', 'SW', 'UE', 'UF', 'UA']  # 29 types
 
-    wr_types_all = ['BE', 'CE', 'E', 'EG', 'EX', 'FA', 'FE', 'FF', 'FG', 'IA', 'RE', 'RF', 'TE', 'UA', 'VA', 'VE', 'VF', 'XE', 'XF']
-    wr_types_ignored = ['DE', 'DF', 'IF', 'IE', 'UE', 'UF', 'bE', 'rE ', 'rF', 'XA', 'SW']
+    wr_types_all = ['BE', 'CE', 'E', 'EG', 'EX', 'FA', 'FE', 'FF', 'FG', 'IA',  \
+                     'RE', 'RF', 'TE', 'UA', 'VA', 'VE', 'VF', 'XE', 'XF']
+    wr_types_ignored = ['DE', 'DF', 'IF', 'IE', 'UE', 'UF', 'bE', 'rE ', 'rF',  \
+                         'XA', 'SW']
     tmc_dict = {'FG':0, 'EG':1, 'E':2, 'TE':3, 'BE':4, \
                     'CE':5, 'RE':6, 'RF':7, 'FE':8, 'FF':9, 'FA':10, \
                     'VE':11, 'VF':12, 'DA':13, 'DF':14, 'DE': 15 }
     tmc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # counters for used types in src_file
-    ext_delimiter = ";"
+    OTFL_DLMTR = ";"
 
     fdline = 0
     src_entry = []
@@ -860,7 +902,7 @@ def app_extract_wbm_ref(filename):
         for src_line in fd:
             fdline += 1
             src_line = src_line.rstrip('\n')
-            src_entry=src_line.split(ext_delimiter) # split line into entries
+            src_entry=src_line.split(OTFL_DLMTR) # split line into entries
             wr_entry_stat[len(src_entry)] += 1 # update statistic numb of elem in entry
             if len(src_entry) > 1:
                 # types statistic
@@ -894,15 +936,14 @@ def app_extract_wbm_ref(filename):
 ##                if fdline <= 5: # test print > 100000: #
 ##                    print fdline, ":  src_entry[0]", src_entry[0], "src_entry[1]", src_entry[1] # .encode('utf_8')
         fd.close()
-        print 'wr ignored empty lines and numeric values: ', nmbs_ignored, nmbs_ignored_integers
-        print 'wr_entry_stat: ', wr_entry_stat
-        wr_types_stat = {k: v for k, v in zip(wr_types, wr_types_cntrs)}
-        print 'wr_types_stat: ', wr_types_stat
-        wr_types_used.sort()
-        print 'wr_types_used: ', wr_types_used
-
-        print 'Number of m.*/c.* entries: ', tmc
-        print 'm.*/c.* entries types:     ', tmc_dict.keys()
+##        print 'wr ignored empty lines and numeric values: ', nmbs_ignored, nmbs_ignored_integers
+##        print 'wr_entry_stat: ', wr_entry_stat
+##        wr_types_stat = {k: v for k, v in zip(wr_types, wr_types_cntrs)}
+##        print 'wr_types_stat: ', wr_types_stat
+##        wr_types_used.sort()
+##        print 'wr_types_used: ', wr_types_used
+##        print 'Number of m.*/c.* entries: ', tmc
+##        print 'm.*/c.* entries types:     ', tmc_dict.keys()
 ##        print "Types overview:\n ignored:", nmbs_ignored, "\n lines in file:", fdline
 ##                    "\n comments: ", nmbs_commnets, "\n undefined: ", nmbs_other
 
@@ -913,39 +954,43 @@ def app_extract_wbm_ref(filename):
 
 
 def fun_save_wr_extracted(filename, ext_dict):
+
     from collections import Counter
-    global ext_extract
-    global ext_delimiter
+
+    global SUFF_EXT_EXTRACT
+    global OTFL_DLMTR
     global wr_extr_file
     global wr_types_used
+
+    SUFF_EXT_EXTRACT = '_wr.extr'
+    OTFL_DLMTR = ';'
+
     wr_types_in_line = []
     wr_types_in_line2 = []
     wr_types_in_line = ['0' for x in range(len(wr_types_used))]
-    print wr_types_used
-    print wr_types_in_line
-    ext_extract = '_wr.extr'
-    ext_delimiter = ';'
+##    print wr_types_used
+##    print wr_types_in_line
     list_elem1 = ''
     # print filename
     # print ext_dict.keys()
-    fne = os.path.splitext(filename)[0]+ext_extract
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_EXTRACT
     if os.path.isfile(fne):
             os.remove(fne)
     ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
     wr_extr_file = fne
     # write to files
     fned = open(fne, 'w')
-    fned.write('SW-ID' + ext_delimiter + 'TypesSum' + ext_delimiter + ext_delimiter.join(wr_types_used) + '\n')
+    fned.write('SW-ID' + OTFL_DLMTR + 'TypesSum' + OTFL_DLMTR + OTFL_DLMTR.join(wr_types_used) + '\n')
 ##    excel_c_str = ['=SUM(C3:C20000)' for x in range(len(wr_types_used))]
-##    fned.write(' ' + ext_delimiter + ' ' + ext_delimiter + ext_delimiter.join(excel_c_str) + '\n') # fill all columns
+##    fned.write(' ' + OTFL_DLMTR + ' ' + OTFL_DLMTR + OTFL_DLMTR.join(excel_c_str) + '\n') # fill all columns
     # output with types' array - 3 lines
-    fned.write(' ' + ext_delimiter + ' ' + ext_delimiter + '=SUM(C3:C20000)' + '\n') # fill first column only
+    fned.write(' ' + OTFL_DLMTR + ' ' + OTFL_DLMTR + '=SUM(C3:C20000)' + '\n') # fill first column only
     ln = 2
     for list_element in ldict:
         # count, sort, remove multiplicated values
         wr_types_in_line2 = list(wr_types_in_line)
         ln += 1
-        excel_str = ext_delimiter + '=SUM(C' + str(ln) + ':AH' + str(ln) + ')' + ext_delimiter # not used in simple type
+        excel_str = OTFL_DLMTR + '=SUM(C' + str(ln) + ':AH' + str(ln) + ')' + OTFL_DLMTR # not used in simple type
         c=Counter(list_element[1])
         # output simple - 1line
 ##        list_elem1 = ' '.join(c.keys())
@@ -956,14 +1001,14 @@ def fun_save_wr_extracted(filename, ext_dict):
             wr_types_in_line2[i] = '1'
         if list_element[0]== '':
             # output with types' array - 1 line
-            fned.write('xxx' + excel_str + ext_delimiter.join(wr_types_in_line2) + '\n')
+            fned.write('xxx' + excel_str + OTFL_DLMTR.join(wr_types_in_line2) + '\n')
             # output simple - 1line
-##            fned.write('xxx' + ext_delimiter + list_elem1 + '\n')
+##            fned.write('xxx' + OTFL_DLMTR + list_elem1 + '\n')
         else:
             # output with types array - 1 line
-            fned.write(list_element[0] + excel_str + ext_delimiter.join(wr_types_in_line2) + '\n')
+            fned.write(list_element[0] + excel_str + OTFL_DLMTR.join(wr_types_in_line2) + '\n')
             # output simple - 1line
-##            fned.write(list_element[0] + ext_delimiter + list_elem1 + '\n')
+##            fned.write(list_element[0] + OTFL_DLMTR + list_elem1 + '\n')
     # Close the file.
     fned.close()
 
@@ -971,33 +1016,39 @@ def fun_save_wr_extracted(filename, ext_dict):
 # save dictionary into file
 # generate .terms file with localized text onla to import it into TEXTStat
 def fun_save_src_ctx_extracted(filename, ext_dict):
-    global dict_sort
-    global ext_delimiter
-    ext_extract_with_ctx = '_with_ctx.extr'
+    global SORT_DICT
+    global OTFL_DLMTR
+    SUFF_EXT_EXTRACT_WITH_CTX = '_with_ctx.extr'
 
     # print filename
     # print ext_dict.keys()
-    fne = os.path.splitext(filename)[0]+ext_extract_with_ctx
+    fne = os.path.splitext(filename)[0]+SUFF_EXT_EXTRACT_WITH_CTX
     if os.path.isfile(fne):
             os.remove(fne)
     ldict = [x for x in ext_dict.iteritems()] # convert dictionary to the list
-    if dict_sort:
+    if SORT_DICT:
         ldict.sort(key=lambda x: x[0]) # sort by key
     # write to files
     fned = open(fne, 'w')
     for list_element in ldict:
         # check for the ctx
-        list_element_ctx = ext_delimiter + '-1'
-        fned.write(list_element[0] + ext_delimiter + list_element[1] + list_element_ctx + '\n')
+        el_ctx = ext_dict.get(list_element[1], NOT_FOUND)
+        if el_ctx == NOT_FOUND:
+            # xxxx
+            list_element_ctx = OTFL_DLMTR + '-1'
+        else:
+            # xxxx
+            list_element_ctx = OTFL_DLMTR + '1'
+        fned.write(list_element[0] + OTFL_DLMTR + list_element[1] + list_element_ctx + '\n')
     # Close the file.
     fned.close()
     if cb_open_txt.get() == 1:
-       os.system(const_editor + fne)
+       os.system(USED_EDITOR + fne)
 
 def app_open_files():
     global src_file
-    global ext_comb
-    global ext_cmp
+    global SUFF_EXT_COMB
+    global SUFF_EXT_CMP
     global rb_props_type
     global cb_in_file_folder
 
@@ -1010,13 +1061,13 @@ def app_open_files():
 ##    else:
 ##        tkMessageBox.showerror('Error Opening File',
 ##                               'Unable to open file: %r. Browse for file again!' % filename)
-##    fne = os.path.splitext(filename)[0]+ext_cmp
+##    fne = os.path.splitext(filename)[0]+SUFF_EXT_CMP
 ##    if os.path.isfile(fne):
-##        os.system(const_editor + fne)
+##        os.system(USED_EDITOR + fne)
 ##
-##    fne = os.path.splitext(filename)[0]+ext_comb
+##    fne = os.path.splitext(filename)[0]+SUFF_EXT_COMB
 ##    if os.path.isfile(fne):
-##        os.system(const_editor + fne)
+##        os.system(USED_EDITOR + fne)
 
 def app_open_web_utf8convertert():
     url = 'http://itpro.cz/juniconv/'
