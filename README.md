@@ -26,11 +26,11 @@ Used Tools:
 # Usage
 1. Select Props type:
  * propertites: *.properties files
-  * Format: Key=<GUI string>. Example: m.Common.Calendar=Calendar
- * xml: *.xml files. Supported formats:
-  * Format 1: Section / Msg - parent Name, element Id , element Name + text
-  * Format 2: phrases / phrase - attribure key + text
-  * Note: No configurable solution (=general) available yet
+  ** Format: Key=<GUI string>. Example: m.Common.Calendar=Calendar
+ * xml: *.xml files. Supported custom formats:
+  ** Format 1: Section / Msg - parent Name, element Id , element Name + text
+  ** Format 2: phrases / phrase - attribure key + text
+  ** Note: No configurable solution (=general) available yet
 2. Select options:
  * Open output in editor: to open *.extr, *.cmp or *.comb files
   * Note: Notepad text editor is used.
