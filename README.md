@@ -5,82 +5,25 @@ Software Properties Manager
 
 #### Purpose
 ```
-    * to report empty keys (SW-IDs)and compare keys in source and destination files and report keys not in both files
-      * `File: *.cmp, Format: <SW-ID> <SRC-GUI-TXT>, Tab delimited`
+    * to report empty keys (SW-IDs)and compare keys in source and destination files
+      and report keys not in both files
+      * File: *.cmp, Format: <SW-ID> <GUI-TXT>, Tab delimited
     * to extract key-GUItxt from source and destination files
-      * `File: *.ext, Format: <SW-ID> <SRC-GUI-TXT>, Tab delimited`
+      * File: *.ext, Format: <SW-ID> <GUI-TXT>, Tab delimited
     * to combine keys in source and destination files
-      * `File: *.comb, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited`
-      Note: If the source and destination GUItxts are the same, then Ratio is 0.
+      * File: *.comb, Format: <Src Dir> <File> <Ratio> <SW ID> <SRC> <DEST>, Tab delimited
+      Note: If the source and destination GUI-TXTS are the same, then Ratio is 0.
             The source and destination files are the same if this is true for all keys.
-    * to generate source or destination file with contex defined in wbm_ref file from source and destination files
-      * `File: *.ext, Format: <SW-ID> <SRC-GUI-TXT> <TypesSum>, <Item types>, Tab delimited`
-    * to generate extended wbm_ref file with contex
-      * `File: wbm_ref_wr.ext, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited`
     * to manage all files in directory of selected source or destination file
     * to support codepage converstion from UTF8 before import into Excel (*.comb)
       Note: Used mostly in case of russification.
     * to open source file directory to access files
-```
-#### Used Tools:
-```* Python 2.7.6, PyScripter, py2exe, Inno Script Studio ```
-#### Usage
-```
-    1. Select Props type:
-    * propertites: *.properties files
-      * Format: Key=<GUI string>. Example: m.Common.Calendar=Calendar
-    * xml: *.xml files. Supported custom formats:
-      * Format 1: Section / Msg - parent Name, element Id , element Name + text
-      * Format 2: phrases / phrase - attribure key + text
-      * Note: No configurable solution (=general) available yet
-    2. Select options:
-      * Open output in editor: to open *.extr, *.cmp or *.comb files
-        Note: Notepad text editor is used.
-      * Extract to file: to generate *.extr file.
-      * All files in folder: to manage all files in directory of selected source or
-        destination file.
-    3. Click "..." to select source file.
-      * Note: If All files in folder option is selected then all files of selected Props type
-              are merged into single into single file, named "_all_files_"<Directory Name>
-    4. Click Extract to import keys into source keys dictionary.
-    5. Click "..." to select destination file.
-      * Note: If All files in folder option is selected then all files of selected Props type
-              are merged into single into single file, named "_all_files_"<Directory Name>
-    6. Click Extract to import keys into destination keys dictionary.
-    7. Click Compare to report empty keys and report keys not in both files
-    8. Click Combine to combine keys in source and destination files
-    9. Click UTF-8 webConv to open juniconv page in browser:
-      * Paste text from file to Input field
-      * Select Java entities >> UTF-8 text direction and click Convert
-      * Select text in Output field, copy to clipboard and paste it into spreadsheet.
-```
-==============
-#### Appendix: wbm_ref items types description
-```
-    Element consists from three main groups of items:
-     ?E - 	items in Editor (View, Insert, Modify)
-     ?F - 	items in Finder (Spreadsheet)
-     ?A - 	other items - Attributes from database IGNORE
-     Note: "?" means any character.
 
-    Each main group contains several items:
-     F? = 	Field in Editor/Finder/other Attribute
-     R? = 	Relation in Editor/Finder
-     D? = 	Domain Name in Editor/Finder/other Attribute - IGNORE
-     V? = 	Value in Editor/Finder/other Attribute - second field (IGNORE others)
-     I? = 	Interval in Editor/Finder/other Attribute - IGNORE
-     U? =    ???? - IGNORE
+    * to generate source or destination file with contex defined in wbm_ref file
+      from source and destination files
+      * File: *.ext, Format: <SW-ID> <GUI-TXT> <TypesSum>, <Item types>, Tab delimited
+    * to generate extended wbm_ref file with contex
+      * File: wbm_ref_wr.ext, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited
 
-    Other items in Editor:
-     TE = 	Tab
-     BE = 	Border Name (start)
-     bE = 	Border Name (end) - IGNORE
-     RE = 	Radio button (start)
-     rE = 	Radio button (end) - IGNORE
-     CE = 	Check box Name
-     or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
-
-    Note: Editor represents a window which is opened when the View, Insert or Modify is clicked.
-          Finder represents a Element's spreadsheet.
-          Most Iskratel's software applications are capable of generating wbm_ref file.
+    Note: Context supported features related to wbm_ref are excluded from public setup.
 ```

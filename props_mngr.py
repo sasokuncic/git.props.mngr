@@ -1,20 +1,38 @@
 #-------------------------------------------------------------------------------
+'''
 ##  Name:     Properties_Manager
 ##  Purpose:
-##  = to check single properties file or directory for empty ids, substitute ; with ,
-##  = to compare src and dest files and report entries not in both files or directories
-##  = to export text to import it into another applications
-##  = to combine src and dest files or directories with files into single one
-##  = to generate file from src or dest with context info from wbm_ref file
-##  = to support codepage converstion from UTF8 before import into Excel (*.comb) file
-##  = to open source directory to access files
-##
-##  Author:   S.Kuncic
-##  Created:  08.04.2014
+    * to report empty keys (SW-IDs)and compare keys in source and destination files
+      and report keys not in both files
+      * File: *.cmp, Format: <SW-ID> <GUI-TXT>, Tab delimited
+    * to extract key-GUItxt from source and destination files
+      * File: *.ext, Format: <SW-ID> <GUI-TXT>, Tab delimited
+    * to combine keys in source and destination files
+      * File: *.comb, Format: <Src Dir> <File> <Ratio> <SW ID> <SRC> <DEST>, Tab delimited
+      Note: If the source and destination GUI-TXTS are the same, then Ratio is 0.
+            The source and destination files are the same if this is true for all keys.
+    * to manage all files in directory of selected source or destination file
+    * to support codepage converstion from UTF8 before import into Excel (*.comb)
+      Note: Used mostly in case of russification.
+    * to open source file directory to access files
+
+    * to generate source or destination file with contex defined in wbm_ref file
+      from source and destination files
+      * File: *.ext, Format: <SW-ID> <GUI-TXT> <TypesSum>, <Item types>, Tab delimited
+    * to generate extended wbm_ref file with contex
+      * File: wbm_ref_wr.ext, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited
+
+    Note: Context supported features related to wbm_ref are excluded from public setup.
+
+##  Author:  S.Kuncic
+##  Release: 3.3, 09.04.2014
+
 ##  TBD:
 ##  = xml tested, ok, ru xml must be in utf8 (convert it before you use it)
 ##  = tooltip contains more ';', see more columns in xlsx file
 ##  = asp properties files support
+##  = *.ini file, WBM_REF_SUPP: True(IT)/False(git)-default
+'''
 #-------------------------------------------------------------------------------
 from Tkinter import *
 import os, sys
@@ -29,6 +47,7 @@ import xml.etree.ElementTree as ET
 
 USED_EDITOR = "Notepad.exe "
 ##USED_EDITOR = "D:\Programs\Notepad2\Notepad2.exe " # IT lap editor
+WBM_REF_SUPP = True  # True = Iskratel, False = Git, public
 
 SORT_DICT = False
 SUFF_EXT_PROPS = ".properties"
@@ -54,6 +73,9 @@ OTFL_DLMTR = '\t'  # output files delimiter
 WRFL_DLMTR = ";"   # delimiter used in wbm_ref file
 OTFL_DLMTR_RPLC = '   ' # ','
 EMPTY_ENTRY = 'xxx'
+
+SRC_LBL = 'English'  # .comb file header, source label
+DST_LBL = 'Russian'  # .comb file header, destination label
 
 # define options for opening a file
 options = {}
@@ -87,7 +109,7 @@ def main_gui(root):
     global cb_in_file_folder
 
     f = Frame(root, width=600, height=400)
-    root.title("Properties Manager")
+    root.title("Properties Manager 3.3i")
 
     rf = LabelFrame(f, relief=GROOVE, bd=2, text = "Props type")
     # Label(rf, text="Props type", width=18, height=2, anchor = W).pack(side=LEFT)
@@ -140,14 +162,17 @@ def main_gui(root):
     df.pack(fill = BOTH, padx=10, pady=0)
 
     # wbm_ref file frame, wr_file
-    wf = LabelFrame(f, relief=SUNKEN, bd=2, text = "wbm_ref.txt File")
-    # Label(wf, text="File dest", width=12, height=2).pack(side=LEFT, pady=5)
-    wr_file = StringVar()
-    Entry(wf, bd = 2, fg = "blue", width =60, textvariable=wr_file).pack(side=LEFT, padx=10)
-    wr_file.set("")
-    Button(wf, text="...", command=app_browse_wr).pack(side=LEFT, padx=5, pady=8)
-    Button(wf, text="ExtrCtx", command=app_extract_wr).pack(side=RIGHT, padx=5, pady=8)
-    wf.pack(fill = BOTH, padx=10, pady=0)
+    if WBM_REF_SUPP:
+        wf = LabelFrame(f, relief=SUNKEN, bd=2, text = "wbm_ref.txt File")
+        wr_file = StringVar()
+        Entry(wf, bd = 2, fg = "blue", width =60, textvariable=wr_file).pack(side=LEFT, padx=10)
+        wr_file.set("")
+        Button(wf, text="...", command=app_browse_wr).pack(side=LEFT, padx=5, pady=8)
+        Button(wf, text="ExtrCtx", command=app_extract_wr).pack(side=RIGHT, padx=5, pady=8)
+        wf.pack(fill = BOTH, padx=10, pady=0)
+    else:
+        wr_file = StringVar()
+        wr_file.set("")
 
     cf = Frame(f, relief=GROOVE, borderwidth=0)
     Button(cf, text="  Close  ", command=app_close).pack(side=RIGHT, padx=10, pady=10)
@@ -425,12 +450,12 @@ def fun_save_extracted(filename, pext_dict):
     # write to files
     fned = open(fne, 'w')
 
-    otfl_hdr = 'SW-ID' + OTFL_DLMTR + 'SRC-GUI-TXT'
+    otfl_hdr = 'SW-ID' + OTFL_DLMTR + 'GUI-TXT'
     if cb_in_file_folder.get():
         otfl_hdr = 'File' + OTFL_DLMTR + otfl_hdr
     if wr_dict_len:
         otfl_hdr = otfl_hdr + OTFL_DLMTR + 'TypesSum' + OTFL_DLMTR + OTFL_DLMTR.join(wr_types_used)
-##        fned.write('SW-ID' + OTFL_DLMTR + 'SRC-GUI-TXT' + OTFL_DLMTR + 'TypesSum' \
+##        fned.write('SW-ID' + OTFL_DLMTR + 'GUI-TXT' + OTFL_DLMTR + 'TypesSum' \
 ##                    + OTFL_DLMTR + OTFL_DLMTR + OTFL_DLMTR.join(wr_types_used) + '\n')
     fned.write(otfl_hdr + '\n')
 
@@ -777,6 +802,12 @@ def fun_save_combined(filename, intersection):
     global SUFF_EXT_COMB
     global src_id_in_file
     global cb_in_file_folder
+    global SRC_LBL
+    global DST_LBL
+
+    if not WBM_REF_SUPP:
+        SRC_LBL = 'SRC'  # .comb file header, source label
+        DST_LBL = 'DEST'  # .comb file header, destination label
 
     fne = os.path.splitext(filename)[0]+SUFF_EXT_COMB
     if os.path.isfile(fne):
@@ -793,7 +824,7 @@ def fun_save_combined(filename, intersection):
             ldict.sort(key=lambda x: x[0]) # sort by key
         # write header for intersection
         fned.write('Src Dir' + OTFL_DLMTR + 'File' + OTFL_DLMTR + 'Ratio' + OTFL_DLMTR \
-                    + 'SW ID' + OTFL_DLMTR + 'English' + OTFL_DLMTR + 'Russian'+ '\n')
+                    + 'SW ID' + OTFL_DLMTR + SRC_LBL + OTFL_DLMTR + DST_LBL + '\n')
         i = 1
         for list_element in ldict:
 ##            if src_len == '':
@@ -876,30 +907,34 @@ class mdict(dict):
 
 
 # Extract wbm gui strings and context types from wbm_ref file
-# Note: Can be used only for properties of products which generate wbm_ref file
-#    wbm_ref format
-#    Element consist from three main groups of items:
-#    ?E - 	items in Editor (View, Insert, Modify)
-#    ?F - 	items in Finder (Spreadsheet)
-#    ?A - 	other items - Attributes from database IGNORE
-#    Note	"?" means any character.
-#    Each main group contains several items:
-#    F? = 	Field in Editor/Finder/other Attribute
-#    R? = 	Relation in Editor/Finder
-#    D? = 	Domain Name in Editor/Finder/other Attribute - IGNORE
-#    V? = 	Value in Editor/Finder/other Attribute - second field (IGNORE others)
-#    I? = 	Interval in Editor/Finder/other Attribute - IGNORE
-#    U? =    ???? - IGNORE
-#    Editor represents a window which is opened when the View, Insert or Modify button is clicked.
-#    Finder represents a Element's spreadsheet.
-#    Other items in Editor:
-#    TE = 	Tab
-#    BE = 	Border Name (start)
-#    bE = 	Border Name (end) - IGNORE
-#    RE = 	Radio button (start)
-#    rE = 	Radio button (end) - IGNORE
-#    CE = 	Check box Name
-#    or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
+'''
+    Element consists from three main groups of items:
+     ?E - 	items in Editor (View, Insert, Modify)
+     ?F - 	items in Finder (Spreadsheet)
+     ?A - 	other items - Attributes from database IGNORE
+     Note: "?" means any character.
+
+    Each main group contains several items:
+     F? = 	Field in Editor/Finder/other Attribute
+     R? = 	Relation in Editor/Finder
+     D? = 	Domain Name in Editor/Finder/other Attribute - IGNORE
+     V? = 	Value in Editor/Finder/other Attribute - second field (IGNORE others)
+     I? = 	Interval in Editor/Finder/other Attribute - IGNORE
+     U? =    ???? - IGNORE
+
+    Other items in Editor:
+     TE = 	Tab
+     BE = 	Border Name (start)
+     bE = 	Border Name (end) - IGNORE
+     RE = 	Radio button (start)
+     rE = 	Radio button (end) - IGNORE
+     CE = 	Check box Name
+     or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
+
+Note: Editor represents a window which is opened when the View, Insert or Modify is clicked.
+      Finder represents a Element's spreadsheet.
+      Most Iskratel's software applications are capable of generating wbm_ref file.
+'''
 def app_extract_wbm_ref(filename):
     global wr_types_used
     global WRFL_DLMTR
