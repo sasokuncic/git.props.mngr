@@ -11,23 +11,19 @@ Software Properties Manager
       * `File: *.ext, Format: <SW-ID> <SRC-GUI-TXT>, Tab delimited`
     * to combine keys in source and destination files
       * `File: *.comb, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited`
+      Note: If the source and destination GUItxts are the same, then Ratio is 0.
+            The source and destination files are the same if this is true for all keys.
     * to generate source or destination file with contex defined in wbm_ref file from source and destination files
       * `File: *.ext, Format: <SW-ID> <SRC-GUI-TXT> <TypesSum>, <Item types>, Tab delimited`
     * to generate extended wbm_ref file with contex
       * `File: wbm_ref_wr.ext, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited`
     * to manage all files in directory of selected source or destination file
     * to support codepage converstion from UTF8 before import into Excel (*.comb)
-      * Note: Used mostly in case of russification.
+      Note: Used mostly in case of russification.
     * to open source file directory to access files
 ```
-==============
-
 #### Used Tools:
-```
-* Python 2.7.6, PyScripter, py2exe, Inno Script Studio
-```
-==============
-
+```* Python 2.7.6, PyScripter, py2exe, Inno Script Studio ```
 #### Usage
 ```
     1. Select Props type:
@@ -60,9 +56,7 @@ Software Properties Manager
 ```
 ==============
 #### Appendix: wbm_ref items types description
-
-'''
-
+```
     Element consists from three main groups of items:
      ?E - 	items in Editor (View, Insert, Modify)
      ?F - 	items in Finder (Spreadsheet)
@@ -86,8 +80,7 @@ Software Properties Manager
      CE = 	Check box Name
      or CE = 	Radio Button (for the CE items between "RE" and "rE" items) - CHECK GUI for RB
 
-Note: Editor represents a window which is opened when the View, Insert or Modify is clicked.
-      Finder represents a Element's spreadsheet.
-      Most Iskratel's software applications are capable of generating wbm_ref file.
-
-'''
+    Note: Editor represents a window which is opened when the View, Insert or Modify is clicked.
+          Finder represents a Element's spreadsheet.
+          Most Iskratel's software applications are capable of generating wbm_ref file.
+```
