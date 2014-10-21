@@ -61,7 +61,7 @@ Software Properties Manager
 ==============
 #### Appendix: wbm_ref items types description
 
-```
+'''
     Element consists from three main groups of items:
      ?E - 	items in Editor (View, Insert, Modify)
      ?F - 	items in Finder (Spreadsheet)
@@ -88,4 +88,4 @@ Software Properties Manager
 Note: Editor represents a window which is opened when the View, Insert or Modify is clicked.
       Finder represents a Element's spreadsheet.
       Most Iskratel's software applications are capable of generating wbm_ref file.
-```
+'''
