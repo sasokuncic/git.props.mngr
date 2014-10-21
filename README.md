@@ -23,8 +23,9 @@ Software Properties Manager
 ==============
 
 #### Used Tools:
-
+```
 * Python 2.7.6, PyScripter, py2exe, Inno Script Studio
+```
 ==============
 
 #### Usage
