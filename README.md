@@ -21,29 +21,27 @@ Software Properties Manager
 * to open source file directory to access files
 
 Used Tools:
-* Python Portable (2.7.6)
-* py2exe
-* Inno Script Studio
+* Python 2.7.6, PyScripter, py2exe, Inno Script Studio
 
 # Usage
 1. Select Props type:
-* propertites: *.properties files
- * Format: Key=<GUI string>. Example: m.Common.Calendar=Calendar
-* xml: *.xml files. Supported formats:
- * Format 1: Section / Msg - parent Name, element Id , element Name + text
- * Format 2: phrases / phrase - attribure key + text
- * Note: No configurable solution (=general) available yet
+ * propertites: *.properties files
+  * Format: Key=<GUI string>. Example: m.Common.Calendar=Calendar
+ * xml: *.xml files. Supported formats:
+  * Format 1: Section / Msg - parent Name, element Id , element Name + text
+  * Format 2: phrases / phrase - attribure key + text
+  * Note: No configurable solution (=general) available yet
 2. Select options:
-* Open output in editor: to open *.extr, *.cmp or *.comb files
- * Note: Notepad text editor is used.
-* Extract to file: to generate *.extr file.
-* All files in folder: to manage all files in directory of selected source or destination file.
+ * Open output in editor: to open *.extr, *.cmp or *.comb files
+  * Note: Notepad text editor is used.
+ * Extract to file: to generate *.extr file.
+ * All files in folder: to manage all files in directory of selected source or destination file.
 3. Click "..." to select source file.
-* Note: If All files in folder option is selected then all files with selected Props type
+ * Note: If All files in folder option is selected then all files with selected Props type
   are merged into single into single file, named "_all_files_"<Directory Name>
 4. Click Extract to import keys into source keys dictionary.
 5. Click "..." to select destination file.
-* Note: If All files in folder option is selected then all files with selected Props type
+ * Note: If All files in folder option is selected then all files with selected Props type
   are merged into single into single file, named "_all_files_"<Directory Name>
 6. Click Extract to import keys into destination keys dictionary.
 7. Click Compare to report empty keys and report keys not in both files
