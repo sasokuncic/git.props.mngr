@@ -1,0 +1,184 @@
+SW-ID	GUI-TXT
+m.SakPortProfile.transAonIndWait	500 Hz Signal Expected
+m.SakPortProfile.fskTab	FSK
+m.SakPortProfile.aonAfterBeginning	AON Info After Beginning of 500 Hz
+m.SakPortProfile.ringSignalFormat	Ring Signal Format
+sys.msgE.PortRebootError	Restart request was successfully on {0} Ports and failed on {1} Ports.
+hw.msgE.MultipleUpdateFailed	Object "POTS Port Profile" with parameter "Line Current" '36' cannot be selected by Multiple Update.
+hw.msgE.LineCurrentAtSetAsDefault	Object "POTS Port Profile" with "Line Current" '36' cannot be Default Profile.
+m.SakPortProfile.distanceLines	Long Distance Line
+m.SakPortProfile.portProfileName	Name
+m.SakPortProfile.duplicate	Duplicate
+hw.msgI.RestartAfterChangeFskParame	Changes of POTS Port Profile parameters will take effect after restarting Node.
+m.SakPortProfile.port	Port
+hw.msgE.PortPrfRelOnNodeErr	Cannot update objects. All ports on Node must have the same connection to "POTS Port Profile". Select all ports on Node.
+m.SakPortProfile.digitMapTPartial	Timeout T Partial
+m.SakPortProfile.tariffFrequencyLabel	Metering Frequency
+m.SakPortProfile.digitMapTCritical	Timeout T Critical
+m.SakPortProfile.flashMax_dscr	Maximum duration time for FLASH-HOOK pulse
+m.SakPortProfile.digitMapTPartial_dscr	When at least one more digit is required for the digit string to match any of the patterns in the digit map, timer T takes on the value T -partial. 
+m.SakEchoProfile.setAsDefault	Set as Default
+m.SakPortProfile.ringsFrequencyLabel	Ring Signal Frequency
+m.SakPortProfile.aonTab	AON
+sys.msgE.PortRebootFail	Restart Port request failed on Node (Node: '{0}'; Node Name: '{1}'), on Port(s): '{2}'.
+hw.msgE.IsMore	{1} should be less then {0}.
+m.SakPortProfile.mid1_dscr	Medium length of the first part of signal period. Allowed values between 0 and 300 ms.
+m.SakPortProfile.aonDelayInfoAfter	Time Between 500 Hz and AON Info
+hw.msgE.Only1PortProfileWithSelectedAonAdapter	Cannot update object "Port". On one chip (ports: 1-4, 5-8, 9-12...) only one object "POTS Port Profile" with enabled parameter "AON Adapter" can be inserted.
+m.SakPortProfile.faxTab	FAX
+m.SakPortProfile.T2_dscr	Pause after FSK transmission from 200..500 ms
+hw.msgW.ShelfIsNotLinkWithContainer	Shelf '{0}' is not linked to Container. ACS will not work.
+m.SakPortProfile.transHookLineCurrHigh	High Line Current Detector
+m.SakPortProfile.ringsFrequency	Ring Signal Frequency
+hw.msgE.Only4PortProfileWithLineCurrent45	Cannot update object "Port". Only 4 objects "POTS Port Profile" with parameter "Line Current" '45'mA on object "Port" on one Board can be inserted.
+m.SakPortProfile.lineCurrent31	31
+common.msgE.CantDeleteDefaultData	Can not delete default settings.
+m.SakPortProfile.3pty	3PTY Authorize
+m.SakPortProfile.ringPulse	Ring Pulse Duration
+m.SakEchoProfile.echoProfileName	Name
+m.SakPortProfile.tariffFrequency16	16
+m.SakPortProfile.fskMode_dscr	FSK signallization mode
+m.SakPortProfile.digitMapTCritical_dscr	If a timer is all that is required to produce a match, timer T takes on the value T - critical.
+m.SakPortProfile.tariffFrequency12	12
+m.SakPortProfile.onHook	On Hook
+m.SakPortProfile.faxMode	Fax Mode
+m.SakPortProfile.digitMap	Digit Map
+m.SakPortProfile.ringPulse_dscr	Ring Pulse alert signal from 200..300 ms
+hw.msgI.containerWithDefinedNameExist	Shelf '{0}' already exist in Container. Do you want to link this Shelf to the existing one in Container? 
+m.SakPortProfile.chargeIntMask	Charging Interrupt
+hw.msgI.restartSakBoards	Changes on SAK boards will take effect after restarting SAK boards.
+m.SakPortProfile.aonPulseLen	AON Pulse Length
+common.msgE.ShelfAlreadyDefinedWithDiffShelfType	{0} '{1}' already defined in the Container with different Shelf Type. Change Shelf Type.
+m.SakPortProfile.titan	For Titans only
+hw.msgI.UpgradeBoardTitle	Upgrade Board Release
+m.SakPortProfile.interdigit_dscr	Time that pass by between two selected numbers
+m.SakPortProfile.portProfileId	Profile
+m.SakPortProfile.hookLineCurrentHigh	High Line Current Detector
+m.SakPortProfile.ct	CT Authorize
+hw.msgE.Only1PortProfileWithLineCurrent36OnChip	Cannot update object "Port". On one chip (ports: 1-4, 5-8, 9-12...) only one object "POTS Port Profile" with parameter "Line Current" '36'mA can be inserted.
+m.SakPortProfile.cw	CW Authorize
+m.SakPortProfile.defaultData	Default Profile
+m.SakPortProfile.tariffSignalLevel045	0.45
+m.SakPortProfile.aonMinDur	Received 500 Hz Length
+m.SakPortProfile.aonDelayInfoNo	AON Info Delay on no 500 Hz
+m.SakPortProfile.trans3pty	3PTY Authorize
+m.SakPortProfile.transmitionMethod	Transmission Method
+m.SakPortProfile.makeMin	Min Digit High
+m.SakPortProfile.T6_dscr	Pause after FSK transmission from 200..2000
+m.SakEchoProfile.systemData	Factory Profile
+m.SakPortProfile.firstDigitTimeout	Timeout on First Digit
+m.SakPortProfile.flashMin	Min Hook Flash
+hw.msgE.LineCurrentAtSetAsDefault1	Selected object "POTS Port Profile" is Default Profile. Object "POTS Port Profile" with "Line Current" '36' cannot be Default Profile.
+m.SakPortProfile.makeMax	Max Digit High
+hw.msgI.BoardVersion	Board Version
+m.SakPortProfile.notTitans	Not for Titans
+m.SakPortProfile.flashMax	Max Hook Flash
+m.SakPortProfile.mid1	Signal Period
+m.SakPortProfile.T4_dscr	Pause after dual tone alert signal from 45..500 ms
+common.msgE.NoAcsConnection	Error while connecting to Auto Configuration Server.
+m.SakPortProfile.alerting	Alert Signal
+m.SakPortProfile.fskMode	FSK Variant
+m.SakPortProfile.transmition	Data Transmission
+m.SakEchoProfile.nodeId	Node
+m.SakPortProfile.offHook	Off Hook
+m.SakPortProfile.dialMode	Dial Mode
+m.SakPortProfile.impedance	Relative Level
+m.SakEchoProfile.defaultData	Default Profile
+hw.msgE.PortPrfWithRelOnPort1	Cannot change parameter "AON Adapter" to enable, because is already connected with Object "Port".
+m.SakPortProfile.ringSignal_dscr	Frequency of ring signal.
+m.SakPortProfile.tariffSignalLevel	Metering Level
+hw.msgW.acsWillNotWork	ACS will not work.
+hw.msgE.TooBigBoardPos	Max number of "Slots" in "Shelf" '{0}' is '{1}'.
+m.SakEchoProfile.tailLength	Tail Length
+m.SakPortProfile.offHook_dscr	Off Hook timer
+m.SakPortProfile.dynamicRtpTx	Dynamic RTP Payload Type TX
+m.SakEchoProfile.transProcessorControl	NLP Control
+m.SakPortProfile.onHook_dscr	On Hook timer
+common.msgE.AlreadyDefined	{0} already defined. \nDefine another {0}.
+m.SakPortProfile.systemData	Factory Profile
+m.SakPortProfile.duslicCoefficient	Line Impedance
+m.SakPortProfile.repetitionsNr	Number of Repetitions
+m.SakPortProfile.dualTone_dscr	Dual tone alert signal
+m.SakPortProfile.transCt_dscr	Call Transfer Authorize
+m.SakEchoProfile.class	POTS Echo Canceller Profile
+hw.msgE.AonAdapterSetAsDefault	Object "POTS Port Profile" with enabled "AON Adapter" cannot be Default Profile.
+hw.msgI.RestartAfterChange	Changes will take effect after sending data.
+m.SakPortProfile.class	POTS Port Profile
+m.SakPortProfile.flashMin_dscr	Minimum duration time for FLASH-HOOK pulse
+m.SakPortProfile.filterWidth_dscr	Filter for changes perception from 1..20 ms
+m.SakPortProfile.decade	Analog Line Signaling
+m.SakPortProfile.T3_dscr	Pause after ring pulse alert signal from 500..800 ms
+m.SakPortProfile.breakMax	Max Digit Low
+m.SakEchoProfile.nonlinearProcessorControl	NLP Control
+m.SakPortProfile.T5_dscr	Pause after first ring pattern from 500..2000
+m.SakPortProfile.analogline	Analog Line
+m.SakEchoProfile.tdm_dscr	"Poor TDM Network" Minimum ERL = 3 dB; "Very Poor TDM network" Minimum ERL = 0 dB
+m.SakPortProfile.aonIndWait	500 Hz Signal Expected
+m.SakPortProfile.fsk2	FSK
+hw.msgE.PortPrfWithRelOnPort	Cannot change parameter "Line Current" to value '36', because is already connected with Object "Port".
+m.SakPortProfile.asClipVariant	Variant
+m.SakPortProfile.aonWait	Time Between Line Req. and 500 Hz
+m.SakPortProfile.breakMin	Min Digit Low
+common.msgE.ProfileUsed	Error while deleting '{0}'.\n{1} '{0}' is used in {2}.\nDefine another {1} in {2}.
+m.SakPortProfile.makeMin_dscr	Minimum length of the second part of signal period
+m.SakPortProfile.hookFlashLength_dscr	Length of the time beetwen closing and opening the line
+m.SakPortProfile.portProfileName_dscr	String for Port Profile
+m.SakPortProfile.factoryDefault	Factory Default
+m.SakPortProfile.tariffFrequency	Metering Frequency
+m.SakEchoProfile.tdm	Minimum Expected from Hybrid
+hw.msgI.restartRelatedSakBoard	Changes on SAK board will take effect after restarting related SAK board.
+m.SakPortProfile.setAsDefault	Set as Default
+m.SakEchoProfile.duplicate	Duplicate
+m.SakPortProfile.breakMax_dscr	Maximum duration time for the first pulse part
+sys.msgE.ResetPortError	Different length of send and received messages.
+common.msgE.CantDeleteDefaultProfile	Can not delete Default Profile.
+m.SakEchoProfile.tailLength_dscr	The amount of delay over which echo is controlled. Normal: Min. ERL = 6 dB
+m.SakPortProfile.dialingTab	Dialing
+m.SakPortProfile.hookFlashLength	Hook Flash Length
+m.SakPortProfile.tariffBurstLength	Tariff Burst Length
+m.SakPortProfile.ringsFrequency25	25
+m.SakPortProfile.suppTab	Supplementary Service
+m.SakPortProfile.makeMax_dscr	Maximum length of the second part of signal period
+m.SakPortProfile.lineCurrent24	24
+m.SakPortProfile.interdigit	Interdigit Pause
+m.SakPortProfile.dynamicRtpRx	Dynamic RTP Payload Type RX
+hw.msgE.InsertEpIdOrE164	{0} or {1} should be inserted.
+m.SakPortProfile.aonWait_dscr	Time Between Line Request and 500 Hz in ms
+m.SakPortProfile.transCt	CT Authorize
+m.SakPortProfile.transCw	CW Authorize
+m.SakPortProfile.ringSignal	Ring Signal
+m.SakPortProfile.shortDisplay	{0}: {1}
+hw.msgE.InsertInBandDtmfParameters	For selected {0}, should be inserted {1}, {2} and {3}.
+m.SakPortProfile.transAonAfterBeginning	AON Info After Beginning of 500 Hz
+m.SakPortProfile.lineCurrent	Line Current
+m.SakPortProfile.fsk	CLIP
+m.SakPortProfile.tariffSignalLevelLabel	Metering Level
+hw.msgE.BoardPositionAlreadyBusy	"{0}" '{1}' on "Shelf" '{2}' already exist. 
+m.SakPortProfile.dualTone	Dual Tone Duration
+m.SakPortProfile.ringsFrequency50	50
+m.SakPortProfile.filterWidth	Filter Width
+hw.msgI.restartRelatedSakBoards	Changes on SAK boards will take effect after restarting related SAK boards.
+m.SakPortProfile.interDigitTimeout	Timeout on Digit
+m.SakPortProfile.trans3pty_dscr	3-party Conference Call Authorize
+m.SakPortProfile.aonVariant	AON Variant
+m.SakPortProfile.digitMapStr	Digit Map
+hw.msgE.MultipleUpdateFailed1	Object "POTS Port Profile" with enabled parameter "AON Adapter" cannot be selected by Multiple Update.
+m.SakPortProfile.tariffSignalLevel2	2
+hw.msgE.Only4PortProfileWithEnabledAonAdapter	Cannot update object "Port". Only 4 objects "POTS Port Profile" with enabled parameter "AON Adapter" on object "Port" on one Node can be inserted.
+m.SakPortProfile.chargeIntMask_dscr	Mode of generation of the synchronization charging interrupt
+m.SakPortProfile.breakMin_dscr	Minimum duration time for the first pulse part
+hw.msgE.AonAdapterSetAsDefault1	Selected object "POTS Port Profile" is Default Profile. Object "POTS Port Profile" with enabled "AON Adapter" cannot be Default Profile.
+m.SakPortProfile.transAonAdapter	AON Adapter
+m.SakPortProfile.T5	T5
+m.SakPortProfile.T4	T4
+m.SakPortProfile.nodeId	Node
+m.SakPortProfile.T6	T6
+m.SakPortProfile.T3	T3
+m.SakPortProfile.T2	T2
+m.SakPortProfile.transCw_dscr	Call Waiting Authorize
+m.SakPortProfile.aonDelayInfoAfter_dscr	Time Between 500 Hz and AON Info in ms
+m.SakPortProfile.aonAddNr	Additional Digit if CgPN is too Short
+hw.msgE.Only4PortProfileWithLineCurrent36	Cannot update object "Port". Only 4 objects "POTS Port Profile" with parameter "Line Current" '36'mA on object "Port" on one Node can be inserted.
+m.SakPortProfile.dtmfMode	DTMF Relay Mode
+m.SakEchoProfile.echoProfileId	Profile
+m.SakPortProfile.aonAdapter	AON Adapter

@@ -18,12 +18,4 @@ Software Properties Manager
     * to support codepage converstion from UTF8 before import into Excel (*.comb)
       Note: Used mostly in case of russification.
     * to open source file directory to access files
-
-    * to generate source or destination file with contex defined in wbm_ref file
-      from source and destination files
-      * File: *.ext, Format: <SW-ID> <GUI-TXT> <TypesSum>, <Item types>, Tab delimited
-    * to generate extended wbm_ref file with contex
-      * File: wbm_ref_wr.ext, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited
-
-    Note: Context supported features related to wbm_ref are excluded from public setup.
 ```

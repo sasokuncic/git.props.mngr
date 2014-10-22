@@ -2,36 +2,46 @@
 '''
 ##  Name:     Properties_Manager
 ##  Purpose:
-    * to report empty keys (SW-IDs)and compare keys in source and destination files
+    * to report empty keys (SW-IDs) and to compare keys in source and destination files
       and report keys not in both files
-      * File: *.cmp, Format: <SW-ID> <GUI-TXT>, Tab delimited
+      * File: *.cmp,
+      * Format: <SW-ID> <GUI-TXT>, Tab delimited
     * to extract key-GUItxt from source and destination files
       * File: *.ext, Format: <SW-ID> <GUI-TXT>, Tab delimited
     * to combine keys in source and destination files
-      * File: *.comb, Format: <Src Dir> <File> <Ratio> <SW ID> <SRC> <DEST>, Tab delimited
-      Note: If the source and destination GUI-TXTS are the same, then Ratio is 0.
+      * File: *.comb,
+      * Format: <Src Dir> <File> <Ratio> <SW ID> <SRC> <DEST>, Tab delimited
+      Note: If the source and destination GUI-TXT is the same, then the Ratio is 0.
             The source and destination files are the same if this is true for all keys.
     * to manage all files in directory of selected source or destination file
-    * to support codepage converstion from UTF8 before import into Excel (*.comb)
+    * to support codepage converstion from UTF8 before importing into Excel (*.comb)
       Note: Used mostly in case of russification.
     * to open source file directory to access files
-
+    INTERNAL FEATURES:
     * to generate source or destination file with contex defined in wbm_ref file
       from source and destination files
-      * File: *.ext, Format: <SW-ID> <GUI-TXT> <TypesSum>, <Item types>, Tab delimited
+      * File: *.ext,
+      * Format: <SW-ID> <GUI-TXT> <TypesSum>, <Item types>, Tab delimited
     * to generate extended wbm_ref file with contex
-      * File: wbm_ref_wr.ext, Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited
+      * File: wbm_ref_wr.ext,
+      * Format: <Src Dir> <File> <Ratio> <SW ID> <English> <Russian>, Tab delimited
 
     Note: Context supported features related to wbm_ref are excluded from public setup.
+    Note: xml_ru must be in utf8 - convert it before you use it!
 
 ##  Author:  S.Kuncic
-##  Release: 3.3, 09.04.2014
-
+##  Release: 3.4, 10.04.2014
+##  Details:
+    Additional procedure: browse for wbm_ref and click Cancel to clear wr_dict dictionary
+##  Used tools:
+    Python 2.7.6
+    PyScripter
+    py2exe: python setup.py py2exe
+    Inno Script Studio
 ##  TBD:
-##  = xml tested, ok, ru xml must be in utf8 (convert it before you use it)
-##  = tooltip contains more ';', see more columns in xlsx file
+##  = xml properties files general solution
 ##  = asp properties files support
-##  = *.ini file, WBM_REF_SUPP: True(IT)/False(git)-default
+##  = tooltip contains more ';', see more columns in xlsx file
 '''
 #-------------------------------------------------------------------------------
 from Tkinter import *
@@ -44,59 +54,63 @@ from os import listdir
 from os.path import isfile, join
 import subprocess
 import xml.etree.ElementTree as ET
-
+#-------------------------------------------------------------------------------
+# application main window title
+APPL_TITLE =  "Properties Manager 3.4i"
+## package build - True = internal, False = public
+IT_PCKG = False
+# used text editor
 USED_EDITOR = "Notepad.exe "
-##USED_EDITOR = "D:\Programs\Notepad2\Notepad2.exe " # IT lap editor
-WBM_REF_SUPP = True  # True = Iskratel, False = Git, public
-
-SORT_DICT = False
-SUFF_EXT_PROPS = ".properties"
 
 ## Generated files extensions
-PREF_FLS_FLDR = '_all_files_' # prefix of file with all files in folder
-SUFF_EXT_EXTRACT = ".extr" # extracted keys
-SUFF_EXT_TERMS = ".terms" # not implemented (SUFF_EXT_EXTRACT used instead)
-SUFF_EXT_CMP = ".cmp" # src-dest comparision
-SUFF_EXT_COMB = ".comb" # src+dest combination
+PREF_FLS_FLDR = "_all_files_" # prefix of file with all files in folder
+SUFF_EXT_EXTRACT = ".extr"    # extracted keys
+SUFF_EXT_TERMS = ".terms"     # not implemented (SUFF_EXT_EXTRACT used instead)
+SUFF_EXT_CMP = ".cmp"         # src-dest comparision
+SUFF_EXT_COMB = ".comb"       # src+dest combination
 SUFF_EXT_EXTRACT_WITH_CTX = '_wr.extr' # src+ctx
 
-PROPS_SUB_DLMTR = "."
-PROPS_ID_DLMTR = "="
-PROPS_COMM_1ST_CHR = "#"
-PROPS_FLNM_1ST_CHR = "*"
+PROPS_SUB_DLMTR = "."     # XML delimiter
+PROPS_ID_DLMTR = "="      # delimiter between SW-ID and GUI-TXT
+PROPS_COMM_1ST_CHR = "#"  # comment first char in line
+PROPS_FLNM_1ST_CHR = "*"  # filename first char in line
 
 PRP_TYP_PROPERTIES = 1
 PRP_TYP_XML = 2
 PRP_TYP_ASP = 3
 
-OTFL_DLMTR = '\t'  # output files delimiter
-WRFL_DLMTR = ";"   # delimiter used in wbm_ref file
-OTFL_DLMTR_RPLC = '   ' # ','
-EMPTY_ENTRY = 'xxx'
+OTFL_DLMTR = "\t"         # output files delimiter
+WRFL_DLMTR = ";"          # delimiter used in wbm_ref file
+OTFL_DLMTR_RPLC = "   "   # ','
+EMPTY_ENTRY = "xxx"       # empty
 
-SRC_LBL = 'English'  # .comb file header, source label
-DST_LBL = 'Russian'  # .comb file header, destination label
-
-# define options for opening a file
+# general parameters
+SORT_DICT = False         # dictionary sort flag
+SUFF_EXT_PROPS = ".properties"
+SRC_LBL = 'English'       # .comb file header, source label
+DST_LBL = 'Russian'       # .comb file header, destination label
+#-------------------------------------------------------------------------------
+# options for opening file
 options = {}
 options['defaultextension'] = '*.*'
 ## options['filetypes'] = [('properties files', '.properties'), ('asp', '.asp'), ('xml', '.xml'), ('all file types', '.*')]
 options['filetypes'] = [('properties files', '.properties'), ('xml', '.xml'), ('all file types', '.*')]
 options['initialdir'] = os.getcwd()
 options['title'] = 'Select file with properties (select Props type checkbuttons also)'
-
+# source definitions
 src_dict = {}
 src_id_in_file = {}
 src_extension = ""
 src_dir = ""
-
+# destination definitions
 dest_dict = {}
 dest_dir = ""
-
+# wbm_ref (context) definitions
 wr_dict = {}
 wr_extr_file = ""
 wr_types_used = []
-#
+
+#-------------------------------------------------------------------------------
 # Application GUI
 #
 def main_gui(root):
@@ -109,7 +123,7 @@ def main_gui(root):
     global cb_in_file_folder
 
     f = Frame(root, width=600, height=400)
-    root.title("Properties Manager 3.3i")
+    root.title(APPL_TITLE)
 
     rf = LabelFrame(f, relief=GROOVE, bd=2, text = "Props type")
     # Label(rf, text="Props type", width=18, height=2, anchor = W).pack(side=LEFT)
@@ -162,7 +176,7 @@ def main_gui(root):
     df.pack(fill = BOTH, padx=10, pady=0)
 
     # wbm_ref file frame, wr_file
-    if WBM_REF_SUPP:
+    if IT_PCKG:
         wf = LabelFrame(f, relief=SUNKEN, bd=2, text = "wbm_ref.txt File")
         wr_file = StringVar()
         Entry(wf, bd = 2, fg = "blue", width =60, textvariable=wr_file).pack(side=LEFT, padx=10)
@@ -183,6 +197,7 @@ def main_gui(root):
     cf.pack(fill = BOTH, padx=0)
     f.pack()
 
+#-------------------------------------------------------------------------------
 # Browse for source file
 #    or if cb_in_file_folder selected for all files in the current directory
 #                                     with the same suffix as selected file
@@ -268,7 +283,8 @@ def app_browse_src():
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
-#
+
+#-------------------------------------------------------------------------------
 #  Replace content in xml files that cannot be translated
 #
 def escape_html(data):
@@ -277,7 +293,8 @@ def escape_html(data):
     data = data.replace('</i>','').replace('<br/>','').replace("<i>",'').replace("<br>",'').replace('  ',' ')
     data2 = data.strip(' ').strip(':')
     return data2
-#
+
+#-------------------------------------------------------------------------------
 # PQMS product specific XML:
 #   Section / Msg - parent Name, element Id , element Name + text
 #
@@ -308,7 +325,7 @@ def extr_xml_mp(root, filename):
     fned.close()
     return fne
 
-#
+#-------------------------------------------------------------------------------
 # AA6191AX - DSR product specific XML
 #   find phrases / phrase - attribure key + text
 def extr_xml_aa(root, filename):
@@ -330,7 +347,7 @@ def extr_xml_aa(root, filename):
     fned.close()
     return fne
 
-#
+#-------------------------------------------------------------------------------
 # Open source file to extract keys
 #
 def app_extract_src():
@@ -348,7 +365,8 @@ def app_extract_src():
     if cb_extr_to_file.get():
         # save to .extr file
         fun_save_extracted(fn, src_dict)
-#
+
+#-------------------------------------------------------------------------------
 # Extract properties
 #
 def fun_extract(filename):
@@ -413,7 +431,7 @@ def fun_extract(filename):
                                'Unable to open file: %r' % filename)
     return ext_dict
 
-#
+#-------------------------------------------------------------------------------
 # Save dictionary into SUFF_EXT_EXTRACT file
 #
 def fun_save_extracted(filename, pext_dict):
@@ -494,6 +512,7 @@ def fun_save_extracted(filename, pext_dict):
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
 
+#-------------------------------------------------------------------------------
 # Browse for destination file
 # or if cb_in_file_folder selected for all files in the current directory
 #                                  with the same suffix as selected file
@@ -587,7 +606,7 @@ def app_browse_dest():
                                'Unable to open file: %r' % sel_file.name)
     options['initialdir'] = dest_dir
 
-#
+#-------------------------------------------------------------------------------
 # Extract keys from destination file
 #
 def app_extract_dest():
@@ -605,7 +624,8 @@ def app_extract_dest():
 # save to .extr file
     if cb_extr_to_file.get():
         fun_save_extracted(fn, dest_dict)
-#
+
+#-------------------------------------------------------------------------------
 # Compare source and destination keys and report differences
 #
 def app_compare():
@@ -647,7 +667,7 @@ def app_compare():
 ##        # dialogbox
 ##        print "app_compare(): Empty dest_dict! Run Extract!"
 
-#
+#-------------------------------------------------------------------------------
 # Save comparision results
 #
 def fun_save_cmpared(filename, notin_dest, notin_src):
@@ -764,7 +784,8 @@ def fun_save_cmpared(filename, notin_dest, notin_src):
     fned.close()
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
-#
+
+#-------------------------------------------------------------------------------
 # Combine source and destination file
 #
 def app_combine():
@@ -788,7 +809,8 @@ def app_combine():
     if len(dest_dict) == 0:
         # dialogbox
         print "app_compare(): Empty dest_dict! Run Extract!"
-#
+
+#-------------------------------------------------------------------------------
 # Save sorted dictionary into file
 #
 def fun_save_combined(filename, intersection):
@@ -805,7 +827,7 @@ def fun_save_combined(filename, intersection):
     global SRC_LBL
     global DST_LBL
 
-    if not WBM_REF_SUPP:
+    if not IT_PCKG:
         SRC_LBL = 'SRC'  # .comb file header, source label
         DST_LBL = 'DEST'  # .comb file header, destination label
 
@@ -848,7 +870,7 @@ def fun_save_combined(filename, intersection):
     if cb_open_txt.get() == 1:
        os.system(USED_EDITOR + fne)
 
-#
+#-------------------------------------------------------------------------------
 # Browse for wbm_ref file
 #
 def app_browse_wr():
@@ -865,6 +887,9 @@ def app_browse_wr():
     #print sel_file.name
     if not sel_file:
         # Cancel button selected
+        # TBD
+        wr_dict.clear()
+        wr_file.set("")
         return
     try:
         # set src file name
@@ -876,12 +901,13 @@ def app_browse_wr():
 ##        print 'properties, single file'
         fd = open(sel_file.name) # check selected file
         fd.close()
-        print 'app_browse_wr(): wbm_ref file name: ', wr_file.get()
+        # print 'app_browse_wr(): wbm_ref file name: ', wr_file.get()
     except Exception, e:
         raise
         tkMessageBox.showerror('Error Opening Src File',
                                'Unable to open file: %r' % sel_file.name)
-#
+
+#-------------------------------------------------------------------------------
 # Extract context from wbm_ref file
 #
 def app_extract_wr():
@@ -905,7 +931,7 @@ class mdict(dict):
         """add the given value to the list of values for this key"""
         self.setdefault(key, []).append(value)
 
-
+#-------------------------------------------------------------------------------
 # Extract wbm gui strings and context types from wbm_ref file
 '''
     Element consists from three main groups of items:
@@ -941,15 +967,20 @@ def app_extract_wbm_ref(filename):
 
     wr_types_all = ['BE', 'DF', 'DE', 'DA', 'FA', 'FE', 'FF', 'FG', 'RE', 'RF', \
                     'TE', 'VA', 'E', 'VE', 'VF', 'EG', 'XA', 'XF', 'CE', 'XE',  \
-                    'EX', 'IA', 'IE', 'IF', 'bE', 'SW', 'UE', 'UF', 'UA']  # 29 types
+                    'EX', 'IA', 'IE', 'IF', 'bE', 'SW', 'UE', 'UF', 'UA'
+                   ]  # 29 types
     wr_types_all = ['BE', 'CE', 'E', 'EG', 'EX', 'FA', 'FE', 'FF', 'FG', 'IA',  \
-                     'RE', 'RF', 'TE', 'UA', 'VA', 'VE', 'VF', 'XE', 'XF']
+                     'RE', 'RF', 'TE', 'UA', 'VA', 'VE', 'VF', 'XE', 'XF'
+                   ]
     wr_types_ignored = ['DE', 'DF', 'IF', 'IE', 'UE', 'UF', 'bE', 'rE ', 'rF',  \
-                         'XA', 'SW']
+                         'XA', 'SW'
+                       ]
     tmc_dict = {'FG':0, 'EG':1, 'E':2, 'TE':3, 'BE':4, \
                     'CE':5, 'RE':6, 'RF':7, 'FE':8, 'FF':9, 'FA':10, \
-                    'VE':11, 'VF':12, 'DA':13, 'DF':14, 'DE': 15 }
-    tmc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # counters for used types in src_file
+                    'VE':11, 'VF':12, 'DA':13, 'DF':14, 'DE': 15
+               }
+    # counters for used types in src_file
+    tmc = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     fdline = 0
     src_entry = []
@@ -1015,7 +1046,7 @@ def app_extract_wbm_ref(filename):
                                'Unable to open file: %r' % filename)
     return ext_dict
 
-#
+#-------------------------------------------------------------------------------
 # Generate file from src or dest with context info from wbm_ref file
 #
 def fun_save_wr_extracted(filename, ext_dict):
@@ -1072,7 +1103,7 @@ def fun_save_wr_extracted(filename, ext_dict):
     # Close the file.
     fned.close()
 
-#
+#-------------------------------------------------------------------------------
 # Open src folder
 #
 def app_open_srcdir():
@@ -1100,7 +1131,7 @@ def app_open_srcdir():
 ##    if os.path.isfile(fne):
 ##        os.system(USED_EDITOR + fne)
 
-#
+#-------------------------------------------------------------------------------
 # Open web page to convert content from UTF8 to suitable codepage to paste it into Excel
 #
 def app_open_web_utf8convertert():
@@ -1110,10 +1141,12 @@ def app_open_web_utf8convertert():
     tkMessageBox.showinfo('Hint',
                        'Copy-Paste content to Input field, select Direction "Java entities >> UTF-8 text" and click Convert!')
 
+#-------------------------------------------------------------------------------
 def app_close():
     global root
     root.destroy()
 
+#-------------------------------------------------------------------------------
 def main():
     global root
     root = Tk()
@@ -1122,5 +1155,6 @@ def main():
     main_gui(root)
     root.mainloop()
 
+#-------------------------------------------------------------------------------
 if __name__ == '__main__':
     main()
