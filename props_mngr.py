@@ -56,7 +56,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 #-------------------------------------------------------------------------------
 # application main window title
-APPL_TITLE =  "Properties Manager 3.4i"
+APPL_TITLE =  "Properties Manager 3.4"
 ## package build - True = internal, False = public
 IT_PCKG = False
 # used text editor
