@@ -19,3 +19,4 @@ Software Properties Manager
       Note: Used mostly in case of russification.
     * to open source file directory to access files
 ```
+For usage [see Wiki](https://github.com/sasokuncic/git.props.mngr/wiki)
